@@ -573,14 +573,18 @@
 
           <!-- 2. 播放、停止与导出控制栏 (单排陈列，宽度与谱子区域完全对齐) -->
           <div class="art-glass rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 shadow-xl shadow-slate-900/10 border border-slate-200/90 bg-white/95 backdrop-blur-xl w-full flex-nowrap">
-            <!-- 播放与停止控制 -->
+            <!-- 播放/暂停 与 停止 控制 -->
             <div class="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
-              <button id="btnPlayToggle" onclick="togglePlayback()" class="play-glow-btn inline-flex items-center px-3.5 sm:px-4 py-2 text-white text-xs sm:text-sm font-semibold rounded-xl cursor-pointer whitespace-nowrap shadow-sm">
+              <!-- 播放 / 暂停 切换按钮 -->
+              <button id="btnPlayToggle" onclick="togglePlayback()" class="play-glow-btn inline-flex items-center px-3.5 sm:px-4 py-2 text-white text-xs sm:text-sm font-semibold rounded-xl cursor-pointer whitespace-nowrap shadow-sm transition-all duration-200">
                 <svg id="playIcon" class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                <span id="playBtnText">试听简谱</span>
+                <span id="playBtnText">播放</span>
               </button>
-              <button onclick="stopPlayback()" class="p-2 text-slate-600 hover:text-slate-900 bg-slate-100/90 hover:bg-slate-200/90 rounded-xl transition border border-slate-200/80 cursor-pointer shadow-2xs whitespace-nowrap" title="停止播放">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+              
+              <!-- 停止 按钮 -->
+              <button id="btnStop" onclick="stopPlayback()" class="inline-flex items-center px-3 py-2 text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/90 rounded-xl transition border border-slate-200/80 cursor-pointer shadow-2xs whitespace-nowrap text-xs sm:text-sm font-semibold" title="彻底停止播放并复位至开头">
+                <svg class="w-3.5 h-3.5 mr-1 text-slate-600" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                <span>停止</span>
               </button>
             </div>
 
@@ -862,6 +866,8 @@
       scaleMode: 'major',     // 调式吸附模式: 'major' | 'pentatonic' | 'chromatic'
       selectedNoteIdx: -1,    // 当前选中编辑的音符索引
       isPlaying: false,       // 是否正在播放
+      playbackState: 'stopped', // 播放状态: 'stopped' | 'playing' | 'paused'
+      playbackIndex: 0,       // 当前音符播放进度索引 (支持暂停后继续)
       playbackTimers: [],     // 播放定时器
       playbackMasterGain: null, // 播放总控音量节点 (用于点击停止时 0 毫秒绝对静音)
       activeOscillators: [],  // 当前正在发声/计划发声的所有振荡器节点
@@ -2618,27 +2624,38 @@
      * 9. 现代电钢与泛音合成器试听
      * ============================================================================
      */
-    function togglePlayback() {
-      if (STATE.isPlaying) {
-        stopPlayback();
+        function togglePlayback() {
+      if (STATE.playbackState === 'playing') {
+        pausePlayback();
         return;
       }
+
       if (STATE.notes.length === 0) {
         showToast('当前没有可播放的音符', 'warning');
         return;
       }
 
-      // 先确保停止之前的所有发声
-      stopPlayback();
+      const startIndex = (STATE.playbackState === 'paused' && STATE.playbackIndex < STATE.notes.length)
+        ? STATE.playbackIndex
+        : 0;
+
+      // 彻底停止上一轮的声源调度
+      killActiveAudio();
 
       STATE.isPlaying = true;
-      document.getElementById('playBtnText').textContent = '停止播放';
+      STATE.playbackState = 'playing';
+
+      // 切换为「暂停」状态视觉
       const btn = document.getElementById('btnPlayToggle');
-      btn.classList.replace('play-glow-btn', 'bg-rose-600');
+      const textEl = document.getElementById('playBtnText');
+      const iconEl = document.getElementById('playIcon');
+      if (btn) {
+        btn.className = 'inline-flex items-center px-3.5 sm:px-4 py-2 text-white text-xs sm:text-sm font-semibold rounded-xl cursor-pointer whitespace-nowrap shadow-md shadow-amber-500/25 transition-all duration-200 bg-amber-500 hover:bg-amber-600';
+      }
+      if (textEl) textEl.textContent = '暂停';
+      if (iconEl) iconEl.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
 
       const ctx = getAudioContext();
-      
-      // 创建总控主增益节点 (连接到扬声器，停止时切断它即可瞬间彻底静音)
       STATE.playbackMasterGain = ctx.createGain();
       STATE.playbackMasterGain.gain.setValueAtTime(1.0, ctx.currentTime);
       STATE.playbackMasterGain.connect(ctx.destination);
@@ -2647,16 +2664,18 @@
       const secPerBeat = 60 / STATE.bpm;
       let currentTime = ctx.currentTime + 0.05;
 
-      STATE.notes.forEach((note, idx) => {
+      for (let idx = startIndex; idx < STATE.notes.length; idx++) {
+        const note = STATE.notes[idx];
         const durSec = note.duration * secPerBeat;
         const delayMs = Math.max(0, (currentTime - ctx.currentTime) * 1000);
 
+        const currentIdx = idx;
         const timerOn = setTimeout(() => {
+          if (STATE.playbackState !== 'playing') return;
+          STATE.playbackIndex = currentIdx;
           document.querySelectorAll(`[class*="note-bg-"]`).forEach(el => el.setAttribute('fill', 'transparent'));
-          const activeBg = document.querySelectorAll(`.note-bg-${idx}`);
-          activeBg.forEach(el => {
-            el.setAttribute('fill', '#fde68a');
-          });
+          const activeBg = document.querySelectorAll(`.note-bg-${currentIdx}`);
+          activeBg.forEach(el => el.setAttribute('fill', '#fde68a'));
         }, delayMs);
         STATE.playbackTimers.push(timerOn);
 
@@ -2666,11 +2685,61 @@
         }
 
         currentTime += durSec;
-      });
+      }
 
-      const endDelayMs = Math.max(0, (currentTime - ctx.currentTime) * 1000);
-      const timerEnd = setTimeout(() => stopPlayback(), endDelayMs + 100);
+      const totalRemainingSec = currentTime - ctx.currentTime;
+      const endDelayMs = Math.max(0, totalRemainingSec * 1000);
+      const timerEnd = setTimeout(() => {
+        if (STATE.playbackState === 'playing') {
+          stopPlayback();
+        }
+      }, endDelayMs + 80);
       STATE.playbackTimers.push(timerEnd);
+    }
+
+    function pausePlayback() {
+      STATE.isPlaying = false;
+      STATE.playbackState = 'paused';
+
+      killActiveAudio();
+
+      // 切换为「继续播放」状态视觉
+      const btn = document.getElementById('btnPlayToggle');
+      const textEl = document.getElementById('playBtnText');
+      const iconEl = document.getElementById('playIcon');
+      if (btn) {
+        btn.className = 'play-glow-btn inline-flex items-center px-3.5 sm:px-4 py-2 text-white text-xs sm:text-sm font-semibold rounded-xl cursor-pointer whitespace-nowrap shadow-sm transition-all duration-200';
+      }
+      if (textEl) textEl.textContent = '播放';
+      if (iconEl) iconEl.innerHTML = '<path d="M8 5v14l11-7z"/>';
+
+      showToast(`已在第 ${STATE.playbackIndex + 1} 个音符处暂停`, 'info');
+    }
+
+    function killActiveAudio() {
+      // 清理已调度的 UI 定时器
+      STATE.playbackTimers.forEach(t => clearTimeout(t));
+      STATE.playbackTimers = [];
+
+      // 0毫秒切断总控音频输出流并断开连接
+      if (STATE.playbackMasterGain && STATE.audioCtx) {
+        try {
+          STATE.playbackMasterGain.gain.setValueAtTime(0, STATE.audioCtx.currentTime);
+          STATE.playbackMasterGain.disconnect();
+        } catch (e) {}
+        STATE.playbackMasterGain = null;
+      }
+
+      // 停止所有振荡器
+      if (STATE.activeOscillators && STATE.activeOscillators.length > 0) {
+        STATE.activeOscillators.forEach(osc => {
+          try {
+            osc.stop();
+            osc.disconnect();
+          } catch (e) {}
+        });
+        STATE.activeOscillators = [];
+      }
     }
 
     function playSynthTone(ctx, freq, startTime, duration) {
@@ -2717,41 +2786,26 @@
       STATE.activeOscillators.push(osc1, osc2, osc3);
     }
 
+    
     function stopPlayback() {
       STATE.isPlaying = false;
+      STATE.playbackState = 'stopped';
+      STATE.playbackIndex = 0;
 
-      // 1. 立即清除所有 UI 高亮定时器
-      STATE.playbackTimers.forEach(t => clearTimeout(t));
-      STATE.playbackTimers = [];
+      killActiveAudio();
 
-      // 2. 0毫秒切断总控音频输出流并断开连接 (保证绝对静音)
-      if (STATE.playbackMasterGain && STATE.audioCtx) {
-        try {
-          STATE.playbackMasterGain.gain.setValueAtTime(0, STATE.audioCtx.currentTime);
-          STATE.playbackMasterGain.disconnect();
-        } catch (e) {}
-        STATE.playbackMasterGain = null;
-      }
-
-      // 3. 立即停止所有已调度或正在振荡的硬件声源
-      if (STATE.activeOscillators && STATE.activeOscillators.length > 0) {
-        STATE.activeOscillators.forEach(osc => {
-          try {
-            osc.stop();
-            osc.disconnect();
-          } catch (e) {}
-        });
-        STATE.activeOscillators = [];
-      }
-
-      // 4. 重置高亮与按钮视觉状态
+      // 重置乐谱所有音符高亮为透明
       document.querySelectorAll(`[class*="note-bg-"]`).forEach(el => el.setAttribute('fill', 'transparent'));
 
+      // 重置播放按钮为初始状态
       const btn = document.getElementById('btnPlayToggle');
+      const textEl = document.getElementById('playBtnText');
+      const iconEl = document.getElementById('playIcon');
       if (btn) {
-        document.getElementById('playBtnText').textContent = '试听简谱';
-        btn.classList.replace('bg-rose-600', 'play-glow-btn');
+        btn.className = 'play-glow-btn inline-flex items-center px-3.5 sm:px-4 py-2 text-white text-xs sm:text-sm font-semibold rounded-xl cursor-pointer whitespace-nowrap shadow-sm transition-all duration-200';
       }
+      if (textEl) textEl.textContent = '播放';
+      if (iconEl) iconEl.innerHTML = '<path d="M8 5v14l11-7z"/>';
     }
 
     /**
