@@ -2,6 +2,7 @@
 
 > 现代艺术智能转谱工坊 · 浏览器开箱即用的“哼唱转简谱 + 五线谱图片光学识谱 (OMR) + 简谱排版试听一体化引擎”
 
+[![Online Demo](https://img.shields.io/badge/Online%20Demo-Live%20Preview-brightgreen.svg)](https://rz3111.github.io/jianpu-studio/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Pure Frontend](https://img.shields.io/badge/Stack-Pure%20HTML%2FJS%2FCSS-emerald.svg)](index.html)
 [![Web Audio API](https://img.shields.io/badge/Web%20Audio-Powered-indigo.svg)](index.html)
