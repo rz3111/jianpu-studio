@@ -915,15 +915,15 @@
   </main>
 
   <!-- ========================================================================= -->
-  <!-- 简谱与五线谱对照查看、双谱同步视听与播放二级页面 (Dual Score Atelier Modal) -->
+  <!-- 简谱与五线谱原图对照查看、双屏联动视听与播放二级页面 (左边识别界面 ↔ 右边简谱界面) -->
   <!-- ========================================================================= -->
-  <div id="dualScoreModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-50 hidden flex-col items-center justify-between p-2 sm:p-5 transition-all duration-300 animate-fadeIn select-none">
-    <div class="art-glass bg-white/98 border border-white/80 rounded-3xl w-full max-w-6xl h-full flex flex-col shadow-2xl overflow-hidden text-slate-800 relative">
+  <div id="dualScoreModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-50 hidden flex-col items-center justify-between p-2 sm:p-4 transition-all duration-300 animate-fadeIn select-none">
+    <div class="art-glass bg-white/98 border border-white/80 rounded-3xl w-full max-w-[1680px] h-full flex flex-col shadow-2xl overflow-hidden text-slate-800 relative">
       
-      <!-- 二级页面顶栏：标题、调号拍号与专业同步播放控制台 -->
-      <div class="px-4 sm:px-6 py-3.5 border-b border-slate-200/90 bg-white/90 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+      <!-- 顶栏：标题、调号拍号与专业同步播放控制台 -->
+      <div class="px-4 sm:px-6 py-3 border-b border-slate-200/90 bg-white/90 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
         
-        <!-- 左侧：标题与乐理元信息 -->
+        <!-- 左侧：标题与状态 -->
         <div class="flex items-center space-x-3 min-w-0">
           <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-sm shadow-xs flex-shrink-0">
             🎼
@@ -931,10 +931,10 @@
           <div class="min-w-0">
             <div class="flex items-center space-x-2">
               <h2 id="dualScoreTitle" class="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate">
-                简谱与五线谱对照视听
+                五线谱原图与简谱双屏对照视听
               </h2>
               <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/70 whitespace-nowrap">
-                双谱同步视听
+                双屏音符联动
               </span>
             </div>
             <div class="flex items-center space-x-3 text-xs text-slate-500 mt-0.5 font-mono">
@@ -945,7 +945,7 @@
           </div>
         </div>
 
-        <!-- 中间：视听与播放控制矩阵 (从头播放 / 从选中音播放 / 停止 / 速度) -->
+        <!-- 中间：核心播放与从此音播放控制 -->
         <div class="flex items-center space-x-2 flex-wrap gap-1.5">
           <!-- 播放/暂停 按钮 -->
           <button id="dualBtnPlay" onclick="togglePlayback()" class="play-glow-btn inline-flex items-center px-4 py-2 text-white text-xs sm:text-sm font-semibold rounded-xl cursor-pointer whitespace-nowrap shadow-sm transition">
@@ -959,54 +959,75 @@
             <span>停止</span>
           </button>
 
-          <!-- 从选中音符处开始播放 (核心功能 2) -->
+          <!-- 从选中的音符开始播放 -->
           <button id="dualBtnPlayFromSelected" onclick="playFromSelectedNote()" class="inline-flex items-center px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap">
             <svg class="w-3.5 h-3.5 mr-1 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             <span id="dualPlayFromSelectedText">从此音播放</span>
           </button>
-
-          <!-- 谱表类型切换 (高音 / 低音) -->
-          <div class="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-600 border border-slate-200/70">
-            <button id="btnDualClefTreble" onclick="switchDualClef('treble')" class="px-2.5 py-1 rounded-lg bg-white text-indigo-700 shadow-2xs font-bold transition cursor-pointer">𝄞 高音谱表</button>
-            <button id="btnDualClefBass" onclick="switchDualClef('bass')" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition cursor-pointer">𝄢 低音谱表</button>
-          </div>
         </div>
 
-        <!-- 右侧：导出与关闭 -->
-        <div class="flex items-center space-x-1.5 flex-shrink-0">
-          <button onclick="exportDualScoreSvg()" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition border border-slate-200/80 cursor-pointer" title="导出双谱对照矢量 SVG 乐谱">
-            <svg class="w-3.5 h-3.5 mr-1 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-            <span class="hidden sm:inline">导出 SVG</span>
-          </button>
-          <button onclick="exportDualScorePng()" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition shadow-xs cursor-pointer" title="导出双谱高清对照排版图片">
-            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <span class="hidden sm:inline">导出图片</span>
-          </button>
-          <button onclick="closeDualScoreModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-100 hover:text-rose-600 text-slate-500 flex items-center justify-center transition cursor-pointer text-base font-bold ml-1" title="关闭并返回主工作台">
+        <!-- 右侧：关闭 -->
+        <div class="flex items-center space-x-2 flex-shrink-0">
+          <button onclick="closeDualScoreModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-100 hover:text-rose-600 text-slate-500 flex items-center justify-center transition cursor-pointer text-base font-bold" title="关闭并返回主工作台">
             &times;
           </button>
         </div>
 
       </div>
 
-      <!-- 二级页面内容展示区：出版级五线谱与简谱平行对照纸张 (具备点击任意音符选中、从此播放与同步高亮) -->
-      <div id="dualScoreScrollContainer" class="flex-1 overflow-auto p-4 sm:p-8 bg-slate-50/70 flex flex-col items-center">
-        <div id="dualScorePaper" class="art-parchment w-full max-w-5xl rounded-2xl p-6 sm:p-10 shadow-lg border border-slate-200/80 flex flex-col space-y-8 animate-fadeIn">
-          <!-- 动态渲染双谱对照 SVG 内容 -->
-          <div id="dualScoreContent" class="w-full flex flex-col items-center justify-center">
-            <!-- 渲染在此 -->
+      <!-- 主体分栏：左边识别界面 ↔ 右边简谱界面 (高亮同一个音) -->
+      <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4 p-3 sm:p-5 bg-slate-100/60 overflow-hidden">
+        
+        <!-- ============================================== -->
+        <!-- 左边：五线谱原图定位与识别界面 -->
+        <!-- ============================================== -->
+        <div class="flex flex-col bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden min-h-0">
+          <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between text-xs font-bold text-slate-700">
+            <div class="flex items-center space-x-1.5">
+              <span>🎼 左侧：五线谱原图定位与识别</span>
+              <span class="text-[10px] text-slate-400 font-normal">(点击乐谱方框可直接选中并联动右侧)</span>
+            </div>
+            <span id="dualOmrNoteCountBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700">0 音</span>
+          </div>
+          <!-- 画布滚动容器 -->
+          <div id="dualOmrCanvasScroll" class="flex-1 overflow-auto p-3 flex items-center justify-center bg-slate-900/5 relative select-none">
+            <canvas id="dualOmrCanvas" style="max-width: 100%; height: auto; object-fit: contain; display: block; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); cursor: crosshair;"></canvas>
+            <div id="dualOmrEmptyTip" class="hidden text-xs text-slate-400 p-8 text-center">暂无五线谱识别原图，请先在主界面上传乐谱图片或选择测试示例</div>
           </div>
         </div>
+
+        <!-- ============================================== -->
+        <!-- 右边：出版级简谱乐谱界面 -->
+        <!-- ============================================== -->
+        <div class="flex flex-col bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden min-h-0">
+          <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between text-xs font-bold text-slate-700">
+            <div class="flex items-center space-x-1.5">
+              <span>📄 右侧：出版级简谱乐谱纸</span>
+              <span class="text-[10px] text-slate-400 font-normal">(点击简谱音符可直接选中并联动左侧)</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="exportJianpuSvg()" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">导出SVG</button>
+              <button onclick="exportJianpuPng()" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">导出图片</button>
+            </div>
+          </div>
+          <!-- 简谱纸滚动容器 -->
+          <div id="dualJianpuScroll" class="flex-1 overflow-auto p-4 sm:p-6 art-parchment flex flex-col items-center">
+            <div id="dualJianpuContainer" class="w-full flex flex-col items-center">
+              <!-- 渲染简谱SVG -->
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <!-- 二级页面底栏：选中音符乐理提示与操作指南 -->
+      <!-- 底部状态指示条 -->
       <div class="px-5 py-2.5 bg-white border-t border-slate-200/80 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
         <div class="flex items-center space-x-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span id="dualScoreNoteStatus">点击谱面上任意音符即可精准定位，并可点击上方「从此音播放」直接从此处开始视听</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span id="dualScoreNoteStatus">左侧五线谱原图与右侧简谱已建立双向实时联动：点击任意音符即可同时高亮并定点试听</span>
         </div>
         <div class="text-[11px] text-slate-400">
-          <span>提示：五线谱与简谱上下严格小节垂直对应 · 支持双击任意音符直接开播 · 按 ESC 键关闭</span>
+          <span>提示：支持按空格键播放/暂停 · 按 ESC 键关闭双屏对照</span>
         </div>
       </div>
 
@@ -4065,8 +4086,29 @@
           const activeBg = document.querySelectorAll(`.note-bg-${currentIdx}`);
           activeBg.forEach(el => el.setAttribute('fill', '#fde68a'));
 
-          // 2. 双谱对照二级页面同步高亮 (五线谱与简谱双向联动)
-          updateDualScoreHighlight(currentIdx);
+          // 2. 双屏对照二级页面：左边识别界面 ↔ 右边简谱界面 高亮同一个音！
+          renderDualOmrCanvas(currentIdx);
+          scrollDualOmrToNote(currentIdx);
+          document.querySelectorAll('#dualJianpuContainer [class*="dual-jianpu-bg-"]').forEach(el => {
+            el.setAttribute('fill', 'transparent');
+            el.setAttribute('stroke', 'transparent');
+          });
+          const rightActives = document.querySelectorAll(`#dualJianpuContainer .dual-jianpu-bg-${currentIdx}`);
+          rightActives.forEach(el => {
+            el.setAttribute('fill', '#fde68a');
+            el.setAttribute('stroke', '#f59e0b');
+          });
+
+          // 3. 实时状态提示
+          const curNote = STATE.notes[currentIdx];
+          if (curNote) {
+            const info = midiToJianpuInfo(curNote.midi, curNote.isRest);
+            const noteName = midiToNoteName(curNote.midi);
+            const statusEl = document.getElementById('dualScoreNoteStatus');
+            if (statusEl) {
+              statusEl.innerHTML = `<span class="font-bold text-amber-600">正在同步视听第 #${currentIdx + 1} 音：</span>${noteName} · 简谱 <b>${info.accidental}${info.text}</b> · 进度: ${currentIdx + 1} / ${STATE.notes.length}`;
+            }
+          }
         }, delayMs);
         STATE.playbackTimers.push(timerOn);
 
@@ -4236,16 +4278,14 @@
     }
 
     // ============================================================================
-    // 10. 简谱与五线谱对照查看与同步播放二级页面 (Dual Score Atelier Engine)
+    // 10. 简谱与五线谱对照查看与同步播放二级页面 (左边识别界面 ↔ 右边简谱界面，高亮同一个音)
     // ============================================================================
-    let currentDualClef = 'treble';
-
     function openDualScoreModal() {
       const modal = document.getElementById('dualScoreModal');
       if (!modal) return;
 
       const title = document.getElementById('scoreTitleInput').value || '未命名乐谱';
-      document.getElementById('dualScoreTitle').textContent = `《${title}》· 简谱与五线谱对照视听`;
+      document.getElementById('dualScoreTitle').textContent = `《${title}》· 双屏对照视听`;
       document.getElementById('dualMetaKey').textContent = `1=${STATE.key}`;
       document.getElementById('dualMetaTime').textContent = STATE.timeSig;
       document.getElementById('dualMetaBpm').textContent = `♩=${STATE.bpm}`;
@@ -4256,7 +4296,15 @@
       modal.classList.remove('hidden');
       modal.classList.add('flex');
 
-      renderDualScore();
+      // 初始化左边五线谱原图交互与绘制
+      initDualOmrCanvas();
+      // 初始化右边简谱渲染
+      renderDualJianpuScore();
+
+      // 如果当前已有选中的音符，双向同步高亮
+      if (STATE.selectedNoteIndex !== null) {
+        syncSelectNote(STATE.selectedNoteIndex, false);
+      }
     }
 
     function closeDualScoreModal() {
@@ -4266,55 +4314,302 @@
       modal.classList.remove('flex');
     }
 
-    function switchDualClef(clef) {
-      currentDualClef = clef;
-      const btnT = document.getElementById('btnDualClefTreble');
-      const btnB = document.getElementById('btnDualClefBass');
-      if (clef === 'treble') {
-        btnT.className = 'px-2.5 py-1 rounded-lg bg-white text-indigo-700 shadow-2xs font-bold transition cursor-pointer';
-        btnB.className = 'px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition cursor-pointer';
-      } else {
-        btnB.className = 'px-2.5 py-1 rounded-lg bg-white text-indigo-700 shadow-2xs font-bold transition cursor-pointer';
-        btnT.className = 'px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition cursor-pointer';
-      }
-      renderDualScore();
-    }
-
     function updateDualSelectedButtonText() {
       const btnText = document.getElementById('dualPlayFromSelectedText');
       if (!btnText) return;
-      if (STATE.selectedNoteIndex !== null && STATE.selectedNoteIndex >= 0 && STATE.selectedNoteIndex < STATE.notes.length) {
-        btnText.textContent = `▶ 从第 #${STATE.selectedNoteIndex + 1} 音播放`;
+      const curIdx = STATE.selectedNoteIndex !== null ? STATE.selectedNoteIndex : STATE.selectedNoteIdx;
+      if (curIdx !== null && curIdx >= 0 && curIdx < STATE.notes.length) {
+        btnText.textContent = `▶ 从第 #${curIdx + 1} 音播放`;
       } else {
         btnText.textContent = '从此音播放';
       }
     }
 
-    function selectDualNote(idx) {
+    // 初始化左侧五线谱原图画布交互
+    function initDualOmrCanvas() {
+      const canvas = document.getElementById('dualOmrCanvas');
+      const emptyTip = document.getElementById('dualOmrEmptyTip');
+      const countBadge = document.getElementById('dualOmrNoteCountBadge');
+      if (!canvas) return;
+
+      if (!STATE.omrData || !STATE.omrData.img) {
+        canvas.style.display = 'none';
+        if (emptyTip) emptyTip.classList.remove('hidden');
+        if (countBadge) countBadge.textContent = '未加载原图';
+        return;
+      }
+
+      canvas.style.display = 'block';
+      if (emptyTip) emptyTip.classList.add('hidden');
+      if (countBadge) countBadge.textContent = `${STATE.omrData.notes.length} 音`;
+
+      // 绑定画布点击事件：点击任意方框选中并联动右侧简谱
+      if (!canvas._dualEventsBound) {
+        canvas._dualEventsBound = true;
+        canvas.addEventListener('click', (e) => {
+          if (!STATE.omrData || !STATE.omrData.notes) return;
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const cx = (e.clientX - rect.left) * scaleX;
+          const cy = (e.clientY - rect.top) * scaleY;
+
+          for (let i = STATE.omrData.notes.length - 1; i >= 0; i--) {
+            const b = STATE.omrData.notes[i].box;
+            if (cx >= b.x - 6 && cx <= b.x + b.w + 6 && cy >= b.y - 6 && cy <= b.y + b.h + 6) {
+              syncSelectNote(i, true);
+              break;
+            }
+          }
+        });
+
+        // 鼠标移动到音符方框上时改变光标
+        canvas.addEventListener('mousemove', (e) => {
+          if (!STATE.omrData || !STATE.omrData.notes) return;
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const cx = (e.clientX - rect.left) * scaleX;
+          const cy = (e.clientY - rect.top) * scaleY;
+
+          let hit = false;
+          for (let i = STATE.omrData.notes.length - 1; i >= 0; i--) {
+            const b = STATE.omrData.notes[i].box;
+            if (cx >= b.x - 4 && cx <= b.x + b.w + 4 && cy >= b.y - 4 && cy <= b.y + b.h + 4) {
+              hit = true;
+              break;
+            }
+          }
+          canvas.style.cursor = hit ? 'pointer' : 'crosshair';
+        });
+      }
+
+      renderDualOmrCanvas(STATE.selectedNoteIndex);
+    }
+
+    // 绘制左侧五线谱原图与标注方框 (当前音符琥珀金高亮，其余翡翠绿)
+    function renderDualOmrCanvas(activeIdx = null) {
+      const canvas = document.getElementById('dualOmrCanvas');
+      if (!canvas || !STATE.omrData || !STATE.omrData.img) return;
+
+      const src = STATE.omrData.img;
+      canvas.width = src.width;
+      canvas.height = src.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(src, 0, 0);
+
+      // 绘制五线谱辅助线 (轻微半透明)
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.35)';
+      ctx.lineWidth = 1.4;
+      for (const sys of STATE.omrData.systems || []) {
+        for (const ly of sys.lines) {
+          ctx.beginPath();
+          ctx.moveTo(10, ly);
+          ctx.lineTo(canvas.width - 10, ly);
+          ctx.stroke();
+        }
+      }
+
+      const notes = STATE.omrData.notes || [];
+      const selIdx = activeIdx !== null ? activeIdx : STATE.selectedNoteIndex;
+
+      notes.forEach((n, idx) => {
+        const isCurrent = idx === selIdx;
+        const box = n.box;
+
+        if (isCurrent) {
+          // 当前联动音符：明亮发光琥珀金框 (与用户截图红框完全一致)
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.32)';
+          ctx.fillRect(box.x, box.y, box.w, box.h);
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 2.8;
+          ctx.strokeRect(box.x, box.y, box.w, box.h);
+
+          // 四角高亮手柄
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(box.x - 3, box.y - 3, 6, 6);
+          ctx.fillRect(box.x + box.w - 3, box.y - 3, 6, 6);
+          ctx.fillRect(box.x - 3, box.y + box.h - 3, 6, 6);
+          ctx.fillRect(box.x + box.w - 3, box.y + box.h - 3, 6, 6);
+        } else {
+          // 常规已识别音符：清新翡翠绿线框
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
+          ctx.fillRect(box.x, box.y, box.w, box.h);
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 1.6;
+          ctx.strokeRect(box.x, box.y, box.w, box.h);
+        }
+
+        // 音符唱名小浮标 (例如 1, 3, 5̇, 7̣)
+        const jianpuInfo = midiToJianpuInfo(n.midi, false);
+        const durSymbol = n.duration >= 4 ? '𝅝' : (n.duration >= 2 ? '𝅗𝅥' : (n.duration <= 0.5 ? '♪' : '♩'));
+        const labelText = `${jianpuInfo.accidental}${jianpuInfo.text}${durSymbol}`;
+
+        const badgeY = box.y > 22 ? box.y - 5 : box.y + box.h + 14;
+        ctx.font = 'bold 12px "JetBrains Mono", sans-serif';
+        const txtWidth = ctx.measureText(labelText).width;
+
+        ctx.fillStyle = isCurrent ? '#b45309' : '#047857';
+        ctx.beginPath();
+        ctx.roundRect(box.x + box.w / 2 - txtWidth / 2 - 3, badgeY - 10, txtWidth + 6, 14, 4);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(labelText, box.x + box.w / 2, badgeY);
+      });
+    }
+
+    // 渲染右侧出版级简谱乐谱
+    function renderDualJianpuScore() {
+      const container = document.getElementById('dualJianpuContainer');
+      if (!container) return;
+
+      const tokens = buildRenderTokens();
+      if (tokens.length === 0) {
+        container.innerHTML = '<div class="py-16 text-center text-slate-400 text-sm">暂无简谱乐谱数据</div>';
+        return;
+      }
+
+      const lines = [];
+      let currentLine = [];
+      let barsInLine = 0;
+
+      for (const tok of tokens) {
+        currentLine.push(tok);
+        if (tok.type === 'bar' || tok.type === 'endbar') {
+          barsInLine++;
+          if (barsInLine >= 4) {
+            lines.push(currentLine);
+            currentLine = [];
+            barsInLine = 0;
+          }
+        }
+      }
+      if (currentLine.length > 0) lines.push(currentLine);
+
+      const svgWidth = 620;
+      const lineHeight = 76;
+      const topPadding = 24;
+      const svgHeight = Math.max(200, lines.length * lineHeight + topPadding + 20);
+
+      let svgHtml = `<svg id="dualJianpuSvg" viewBox="0 0 ${svgWidth} ${svgHeight}" width="100%" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="font-family: 'JetBrains Mono', 'Times New Roman', serif;">`;
+
+      lines.forEach((lineTokens, lineIdx) => {
+        const lineY = topPadding + lineIdx * lineHeight;
+        const leftMargin = 30;
+        const rightMargin = svgWidth - 30;
+        const usableWidth = rightMargin - leftMargin;
+
+        const totalSlots = lineTokens.length;
+        const slotWidth = usableWidth / Math.max(1, totalSlots);
+
+        lineTokens.forEach((tok, slotIdx) => {
+          const x = leftMargin + slotIdx * slotWidth + slotWidth / 2;
+
+          if (tok.type === 'bar') {
+            svgHtml += `<line x1="${x}" y1="${lineY - 18}" x2="${x}" y2="${lineY + 16}" stroke="#334155" stroke-width="1.8"/>`;
+          } else if (tok.type === 'endbar') {
+            svgHtml += `<line x1="${x - 3}" y1="${lineY - 18}" x2="${x - 3}" y2="${lineY + 16}" stroke="#334155" stroke-width="1.2"/>`;
+            svgHtml += `<line x1="${x + 2}" y1="${lineY - 18}" x2="${x + 2}" y2="${lineY + 16}" stroke="#334155" stroke-width="3.5"/>`;
+          } else if (tok.type === 'dash') {
+            svgHtml += `<text x="${x}" y="${lineY}" font-size="20" fill="#0f172a" font-weight="bold" text-anchor="middle">-</text>`;
+          } else if (tok.type === 'note') {
+            const isSel = tok.noteIdx === STATE.selectedNoteIndex;
+            const fillBg = isSel ? '#fde68a' : 'transparent';
+            const strokeBorder = isSel ? '#f59e0b' : 'transparent';
+
+            svgHtml += `<g class="cursor-pointer" onclick="syncSelectNote(${tok.noteIdx}, true)">`;
+            svgHtml += `<rect class="dual-jianpu-bg-${tok.noteIdx}" x="${x - slotWidth * 0.42}" y="${lineY - 22}" width="${slotWidth * 0.84}" height="42" rx="6" fill="${fillBg}" stroke="${strokeBorder}" stroke-width="1.5" transition="all 0.15s ease"/>`;
+
+            // 主音符
+            svgHtml += `<text x="${x}" y="${lineY}" font-size="21" fill="#0f172a" font-weight="bold" text-anchor="middle">${tok.accidental}${tok.text}</text>`;
+
+            // 高低八度点
+            if (tok.octaveDots > 0) {
+              for (let d = 0; d < tok.octaveDots; d++) {
+                svgHtml += `<circle cx="${x}" cy="${lineY - 17 - d * 4.5}" r="1.8" fill="#4338ca"/>`;
+              }
+            } else if (tok.octaveDots < 0) {
+              for (let d = 0; d < Math.abs(tok.octaveDots); d++) {
+                svgHtml += `<circle cx="${x}" cy="${lineY + 6 + d * 4.5}" r="1.8" fill="#4338ca"/>`;
+              }
+            }
+
+            // 减时线
+            if (tok.underlines === 1) {
+              svgHtml += `<line x1="${x - 8}" y1="${lineY + 4}" x2="${x + 8}" y2="${lineY + 4}" stroke="#0f172a" stroke-width="1.8"/>`;
+            } else if (tok.underlines === 2) {
+              svgHtml += `<line x1="${x - 8}" y1="${lineY + 4}" x2="${x + 8}" y2="${lineY + 4}" stroke="#0f172a" stroke-width="1.8"/>`;
+              svgHtml += `<line x1="${x - 8}" y1="${lineY + 7.5}" x2="${x + 8}" y2="${lineY + 7.5}" stroke="#0f172a" stroke-width="1.8"/>`;
+            }
+
+            svgHtml += `</g>`;
+          }
+        });
+      });
+
+      svgHtml += `</svg>`;
+      container.innerHTML = svgHtml;
+    }
+
+    // 核心联动：双屏选中同一个音符 (左边识别原图 ↔ 右边简谱 同步高亮同一个音！)
+    function syncSelectNote(idx, playPreview = false) {
+      if (idx === null || idx < 0 || idx >= STATE.notes.length) return;
       STATE.selectedNoteIndex = idx;
-      updateDualSelectedButtonText();
-      
-      // 同步更新主页面的选中状态
+      STATE.selectedNoteIdx = idx;
+      STATE.playbackIndex = idx;
+
+      // 1. 左边识别界面：五线谱原图方框亮琥珀金，并自动滚动使该音符居中
+      renderDualOmrCanvas(idx);
+      scrollDualOmrToNote(idx);
+
+      // 2. 右边简谱界面：音符高亮金色底，并自动平滑滚动
+      document.querySelectorAll('#dualJianpuContainer [class*="dual-jianpu-bg-"]').forEach(el => {
+        el.setAttribute('fill', 'transparent');
+        el.setAttribute('stroke', 'transparent');
+      });
+      const rightActives = document.querySelectorAll(`#dualJianpuContainer .dual-jianpu-bg-${idx}`);
+      rightActives.forEach(el => {
+        el.setAttribute('fill', '#fde68a');
+        el.setAttribute('stroke', '#f59e0b');
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+
+      // 3. 同步主工作台的状态
       selectNoteForEdit(idx);
+      renderOmrCanvas();
+      updateDualSelectedButtonText();
 
-      // 高亮双谱中的对应音符
-      document.querySelectorAll('.dual-note').forEach(el => el.classList.remove('dual-selected'));
-      document.querySelectorAll(`.dual-note-${idx}`).forEach(el => el.classList.add('dual-selected'));
-
-      // 试听单音
+      // 4. 试听单音
       const note = STATE.notes[idx];
-      if (note && !note.isRest && note.midi > 0) {
+      if (playPreview && note && !note.isRest && note.midi > 0) {
         playOmrPreviewTone(note.midi, 0.22);
       }
 
-      // 状态栏更新
-      const info = midiToJianpuInfo(note.midi, note.isRest);
-      const noteName = midiToNoteName(note.midi);
-      const durText = note.duration >= 4 ? '全音符' : (note.duration >= 2 ? '二分' : (note.duration <= 0.5 ? '八分' : '四分'));
-      const statusEl = document.getElementById('dualScoreNoteStatus');
-      if (statusEl) {
-        statusEl.innerHTML = `<span class="font-bold text-indigo-700">已选中第 #${idx + 1} 音：</span>${noteName} · 简谱 <b>${info.accidental}${info.text}</b> (${durText}) · 点击上方「从此音播放」直接开始视听`;
+      // 5. 状态栏更新
+      if (note) {
+        const info = midiToJianpuInfo(note.midi, note.isRest);
+        const noteName = midiToNoteName(note.midi);
+        const durText = note.duration >= 4 ? '全音符' : (note.duration >= 2 ? '二分' : (note.duration <= 0.5 ? '八分' : '四分'));
+        const statusEl = document.getElementById('dualScoreNoteStatus');
+        if (statusEl) {
+          statusEl.innerHTML = `<span class="font-bold text-amber-600">已同时高亮第 #${idx + 1} 音：</span>${noteName} · 简谱 <b>${info.accidental}${info.text}</b> (${durText}) · 点击「从此音播放」直接开始试听`;
+        }
       }
+    }
+
+    function scrollDualOmrToNote(idx) {
+      if (!STATE.omrData || !STATE.omrData.notes || !STATE.omrData.notes[idx]) return;
+      const scrollBox = document.getElementById('dualOmrCanvasScroll');
+      const canvas = document.getElementById('dualOmrCanvas');
+      if (!scrollBox || !canvas || canvas.style.display === 'none') return;
+
+      const box = STATE.omrData.notes[idx].box;
+      const scale = canvas.clientHeight / canvas.height;
+      const targetTop = box.y * scale;
+      const scrollCenter = targetTop - scrollBox.clientHeight / 2;
+      scrollBox.scrollTo({ top: Math.max(0, scrollCenter), behavior: 'smooth' });
     }
 
     function midiToNoteName(midi) {
@@ -4323,300 +4618,6 @@
       const oct = Math.floor(midi / 12) - 1;
       const deg = midi % 12;
       return `${names[deg]}${oct}`;
-    }
-
-    function updateDualScoreHighlight(activeIdx) {
-      document.querySelectorAll('.dual-note').forEach(el => el.classList.remove('dual-active'));
-      document.querySelectorAll(`.dual-note-${activeIdx}`).forEach(el => el.classList.add('dual-active'));
-
-      const note = STATE.notes[activeIdx];
-      if (note) {
-        const info = midiToJianpuInfo(note.midi, note.isRest);
-        const noteName = midiToNoteName(note.midi);
-        const statusEl = document.getElementById('dualScoreNoteStatus');
-        if (statusEl) {
-          statusEl.innerHTML = `<span class="font-bold text-amber-600">正在播放第 #${activeIdx + 1} 音：</span>${noteName} · 简谱 <b>${info.accidental}${info.text}</b> · 进度: ${activeIdx + 1} / ${STATE.notes.length}`;
-        }
-      }
-    }
-
-    // 核心渲染：五线谱与简谱小节对齐平行总谱
-    function renderDualScore() {
-      const container = document.getElementById('dualScoreContent');
-      if (!container) return;
-
-      if (!STATE.notes || STATE.notes.length === 0) {
-        container.innerHTML = '<div class="py-16 text-center text-slate-400 text-sm">暂无乐谱音符，请在主工作台先录入音频或识别乐谱</div>';
-        return;
-      }
-
-      // 计算节拍数
-      const beatsPerMeasure = parseInt(STATE.timeSig.split('/')[0], 10) || 4;
-      
-      // 将音符切分为小节
-      const measures = [];
-      let currentMeasure = [];
-      let currentBeatSum = 0;
-
-      STATE.notes.forEach((note, idx) => {
-        currentMeasure.push({ note, idx });
-        currentBeatSum += note.duration;
-        if (currentBeatSum >= beatsPerMeasure - 0.01) {
-          measures.push(currentMeasure);
-          currentMeasure = [];
-          currentBeatSum = 0;
-        }
-      });
-      if (currentMeasure.length > 0) {
-        measures.push(currentMeasure);
-      }
-
-      // 每行排 3~4 个小节
-      const measuresPerSystem = 3;
-      const systems = [];
-      for (let i = 0; i < measures.length; i += measuresPerSystem) {
-        systems.push(measures.slice(i, i + measuresPerSystem));
-      }
-
-      const svgWidth = 920;
-      const systemHeight = 180;
-      const totalSvgHeight = Math.max(260, systems.length * systemHeight + 60);
-
-      let svgHtml = `<svg id="dualScoreSvgElement" viewBox="0 0 ${svgWidth} ${totalSvgHeight}" width="100%" height="${totalSvgHeight}" xmlns="http://www.w3.org/2000/svg" style="font-family: 'JetBrains Mono', 'Times New Roman', serif;">
-        <defs>
-          <style>
-            .dual-note:hover rect.note-hover-bg { fill: rgba(99, 102, 241, 0.12) !important; }
-            .dual-note.dual-selected rect.note-hover-bg { fill: rgba(245, 158, 11, 0.25) !important; stroke: #f59e0b; stroke-width: 1.5; }
-            .dual-note.dual-active rect.note-hover-bg { fill: #fde68a !important; stroke: #f59e0b; stroke-width: 2; }
-            .dual-note.dual-active text.jianpu-num { fill: #b45309 !important; font-weight: 900; }
-          </style>
-        </defs>`;
-
-      // 遍历渲染每个系统行
-      systems.forEach((sysMeasures, sysIdx) => {
-        const sysTopY = 30 + sysIdx * systemHeight;
-        const staffTopY = sysTopY + 20;
-        const lineSpacing = 9; // 五线谱线间距
-        const bottomLineY = staffTopY + 4 * lineSpacing;
-        const jianpuBaseY = staffTopY + 86; // 简谱基准水平线
-
-        const leftMargin = 70;
-        const rightMargin = svgWidth - 30;
-        const usableWidth = rightMargin - leftMargin;
-        const measureWidth = usableWidth / sysMeasures.length;
-
-        // 1. 绘制五线谱 5 条平行横线
-        for (let l = 0; l < 5; l++) {
-          const ly = staffTopY + l * lineSpacing;
-          svgHtml += `<line x1="${leftMargin}" y1="${ly}" x2="${rightMargin}" y2="${ly}" stroke="#334155" stroke-width="1.2"/>`;
-        }
-
-        // 2. 绘制行首谱号 (高音 𝄞 或 低音 𝄢)
-        if (currentDualClef === 'treble') {
-          svgHtml += `<text x="${leftMargin - 42}" y="${bottomLineY + 2}" font-size="38" fill="#1e293b" font-family="serif">𝄞</text>`;
-          svgHtml += `<text x="${leftMargin - 62}" y="${bottomLineY - 14}" font-size="10" fill="#64748b" font-weight="bold">五线</text>`;
-          svgHtml += `<text x="${leftMargin - 62}" y="${jianpuBaseY}" font-size="10" fill="#64748b" font-weight="bold">简谱</text>`;
-        } else {
-          svgHtml += `<text x="${leftMargin - 42}" y="${staffTopY + 18}" font-size="34" fill="#1e293b" font-family="serif">𝄢</text>`;
-          svgHtml += `<text x="${leftMargin - 62}" y="${bottomLineY - 14}" font-size="10" fill="#64748b" font-weight="bold">五线</text>`;
-          svgHtml += `<text x="${leftMargin - 62}" y="${jianpuBaseY}" font-size="10" fill="#64748b" font-weight="bold">简谱</text>`;
-        }
-
-        // 行首起首小节线 (连接五线谱与简谱)
-        svgHtml += `<line x1="${leftMargin}" y1="${staffTopY}" x2="${leftMargin}" y2="${jianpuBaseY + 12}" stroke="#334155" stroke-width="1.8"/>`;
-
-        // 遍历该行小节
-        sysMeasures.forEach((measureItems, mIdx) => {
-          const mLeft = leftMargin + mIdx * measureWidth;
-          const mRight = mLeft + measureWidth;
-
-          // 小节线 (贯穿五线谱与简谱)
-          svgHtml += `<line x1="${mRight}" y1="${staffTopY}" x2="${mRight}" y2="${jianpuBaseY + 12}" stroke="#475569" stroke-width="1.4"/>`;
-
-          // 小节序号
-          const mNumber = sysIdx * measuresPerSystem + mIdx + 1;
-          svgHtml += `<text x="${mLeft + 4}" y="${staffTopY - 6}" font-size="10" fill="#94a3b8" font-family="sans-serif">${mNumber}</text>`;
-
-          // 排布小节内音符
-          const noteCount = measureItems.length;
-          const noteColWidth = measureWidth / Math.max(1, noteCount);
-
-          measureItems.forEach((item, nIdx) => {
-            const note = item.note;
-            const globalIdx = item.idx;
-            const noteCenterX = mLeft + nIdx * noteColWidth + noteColWidth / 2;
-
-            // 音符交互组
-            svgHtml += `<g class="dual-note dual-note-${globalIdx} cursor-pointer" onclick="selectDualNote(${globalIdx})" ondblclick="playFromSelectedNote(${globalIdx})">`;
-            
-            // 背景高亮柱
-            svgHtml += `<rect class="note-hover-bg" x="${noteCenterX - noteColWidth * 0.44}" y="${staffTopY - 16}" width="${noteColWidth * 0.88}" height="${systemHeight - 34}" rx="8" fill="transparent" transition="all 0.15s ease"/>`;
-
-            // -------------------------------------------------------------
-            // 上半部分：五线谱音符绘制 (Staff Notation Note)
-            // -------------------------------------------------------------
-            if (note.isRest || note.midi <= 0) {
-              // 休止符
-              svgHtml += `<text x="${noteCenterX - 4}" y="${staffTopY + 22}" font-size="18" fill="#475569">𝄽</text>`;
-            } else {
-              // 计算五线谱步数与 Y 坐标
-              const oct = Math.floor(note.midi / 12) - 1;
-              const chromaticDeg = note.midi % 12;
-              const diatonicIndexes = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6];
-              const isSharp = [false, true, false, true, false, false, true, false, true, false, true, false][chromaticDeg];
-              const diatonicDeg = diatonicIndexes[chromaticDeg];
-
-              let step = (oct - 4) * 7 + diatonicDeg - 2; // Treble: bottom line E4 is step 0
-              if (currentDualClef === 'bass') {
-                step = (oct - 2) * 7 + diatonicDeg - 4; // Bass: bottom line G2 is step 0
-              }
-
-              const headY = bottomLineY - step * (lineSpacing / 2);
-
-              // 绘制加线 (Ledger Lines)
-              if (step <= -2) {
-                for (let s = -2; s >= step; s -= 2) {
-                  const ly = bottomLineY - s * (lineSpacing / 2);
-                  svgHtml += `<line x1="${noteCenterX - 10}" y1="${ly}" x2="${noteCenterX + 10}" y2="${ly}" stroke="#334155" stroke-width="1.3"/>`;
-                }
-              } else if (step >= 8) {
-                for (let s = 8; s <= step; s += 2) {
-                  const ly = bottomLineY - s * (lineSpacing / 2);
-                  svgHtml += `<line x1="${noteCenterX - 10}" y1="${ly}" x2="${noteCenterX + 10}" y2="${ly}" stroke="#334155" stroke-width="1.3"/>`;
-                }
-              }
-
-              // 升降号
-              if (isSharp) {
-                svgHtml += `<text x="${noteCenterX - 13}" y="${headY + 4}" font-size="12" fill="#1e293b" font-weight="bold">♯</text>`;
-              }
-
-              // 符头 (实心四分/八分，或空心全/二分)
-              const isHollow = note.duration >= 2;
-              if (isHollow) {
-                svgHtml += `<ellipse cx="${noteCenterX}" cy="${headY}" rx="5.2" ry="3.8" transform="rotate(-22 ${noteCenterX} ${headY})" fill="#ffffff" stroke="#1e293b" stroke-width="2.0"/>`;
-              } else {
-                svgHtml += `<ellipse cx="${noteCenterX}" cy="${headY}" rx="5.0" ry="3.8" transform="rotate(-22 ${noteCenterX} ${headY})" fill="#1e293b"/>`;
-              }
-
-              // 符干 (四分、二分、八分均有符干)
-              if (note.duration < 4) {
-                const stemUp = step < 4;
-                const stemX = stemUp ? noteCenterX + 4.2 : noteCenterX - 4.2;
-                const stemLen = 26;
-                const stemEndY = stemUp ? headY - stemLen : headY + stemLen;
-                svgHtml += `<line x1="${stemX}" y1="${headY}" x2="${stemX}" y2="${stemEndY}" stroke="#1e293b" stroke-width="1.4"/>`;
-
-                // 八分音符符尾 (单旗)
-                if (note.duration <= 0.5) {
-                  if (stemUp) {
-                    svgHtml += `<path d="M${stemX} ${stemEndY} C${stemX + 8} ${stemEndY + 8}, ${stemX + 6} ${stemEndY + 16}, ${stemX + 1} ${stemEndY + 20}" fill="none" stroke="#1e293b" stroke-width="1.8"/>`;
-                  } else {
-                    svgHtml += `<path d="M${stemX} ${stemEndY} C${stemX + 8} ${stemEndY - 8}, ${stemX + 6} ${stemEndY - 16}, ${stemX + 1} ${stemEndY - 20}" fill="none" stroke="#1e293b" stroke-width="1.8"/>`;
-                  }
-                }
-              }
-
-              // 五线谱音名小注脚 (如 C4, G4，增强初学者对照易读性)
-              const noteName = midiToNoteName(note.midi);
-              svgHtml += `<text x="${noteCenterX}" y="${staffTopY - 3}" font-size="9" fill="#94a3b8" text-anchor="middle" font-weight="bold">${noteName}</text>`;
-            }
-
-            // -------------------------------------------------------------
-            // 下半部分：简谱音符绘制 (Numbered Notation Note)
-            // -------------------------------------------------------------
-            const jianpuInfo = midiToJianpuInfo(note.midi, note.isRest);
-            
-            // 简谱主唱名数字 (1, 2, 3...)
-            svgHtml += `<text class="jianpu-num" x="${noteCenterX}" y="${jianpuBaseY}" font-size="20" fill="#0f172a" font-weight="bold" text-anchor="middle">${jianpuInfo.accidental}${jianpuInfo.text}</text>`;
-
-            // 高低八度圆点
-            if (jianpuInfo.octaveDots > 0) {
-              for (let d = 0; d < jianpuInfo.octaveDots; d++) {
-                svgHtml += `<circle cx="${noteCenterX}" cy="${jianpuBaseY - 18 - d * 5}" r="1.8" fill="#4338ca"/>`;
-              }
-            } else if (jianpuInfo.octaveDots < 0) {
-              for (let d = 0; d < Math.abs(jianpuInfo.octaveDots); d++) {
-                svgHtml += `<circle cx="${noteCenterX}" cy="${jianpuBaseY + 6 + d * 5}" r="1.8" fill="#4338ca"/>`;
-              }
-            }
-
-            // 减时线下划线 (八分音符 1 条，十六分音符 2 条)
-            if (note.duration <= 0.5) {
-              svgHtml += `<line x1="${noteCenterX - 8}" y1="${jianpuBaseY + 4}" x2="${noteCenterX + 8}" y2="${jianpuBaseY + 4}" stroke="#0f172a" stroke-width="1.8"/>`;
-            }
-            if (note.duration <= 0.25) {
-              svgHtml += `<line x1="${noteCenterX - 8}" y1="${jianpuBaseY + 7}" x2="${noteCenterX + 8}" y2="${jianpuBaseY + 7}" stroke="#0f172a" stroke-width="1.8"/>`;
-            }
-
-            // 增时线横杠 (二分音符一个 -，全音符三个 -)
-            if (note.duration >= 2) {
-              svgHtml += `<text x="${noteCenterX + 14}" y="${jianpuBaseY}" font-size="18" fill="#0f172a" font-weight="bold">-</text>`;
-            }
-            if (note.duration >= 4) {
-              svgHtml += `<text x="${noteCenterX + 24}" y="${jianpuBaseY}" font-size="18" fill="#0f172a" font-weight="bold">- -</text>`;
-            }
-
-            svgHtml += `</g>`;
-          });
-        });
-      });
-
-      svgHtml += `</svg>`;
-      container.innerHTML = svgHtml;
-
-      // 如果有已选中的音符，恢复高亮
-      if (STATE.selectedNoteIndex !== null) {
-        document.querySelectorAll(`.dual-note-${STATE.selectedNoteIndex}`).forEach(el => el.classList.add('dual-selected'));
-      }
-    }
-
-    // 导出双谱矢量 SVG
-    function exportDualScoreSvg() {
-      const svg = document.getElementById('dualScoreSvgElement');
-      if (!svg) {
-        showToast('暂无对照乐谱可导出', 'warning');
-        return;
-      }
-      const svgData = new XMLSerializer().serializeToString(svg);
-      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${document.getElementById('scoreTitleInput').value || 'jianpu'}_双谱对照.svg`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('双谱对照矢量 SVG 乐谱已导出！', 'success');
-    }
-
-    // 导出双谱高清图片
-    function exportDualScorePng() {
-      const svg = document.getElementById('dualScoreSvgElement');
-      if (!svg) {
-        showToast('暂无对照乐谱可导出', 'warning');
-        return;
-      }
-      const svgData = new XMLSerializer().serializeToString(svg);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      const scale = 2; // 2x 高清印刷级
-
-      img.onload = () => {
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        ctx.scale(scale, scale);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, img.width, img.height);
-        ctx.drawImage(img, 0, 0);
-
-        const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
-        a.download = `${document.getElementById('scoreTitleInput').value || 'jianpu'}_双谱对照高清图.png`;
-        a.click();
-        showToast('双谱对照高清乐谱图片已导出！', 'success');
-      };
-      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
     }
     function openPreviewModal(type) {
       STATE.currentPreviewType = type;
