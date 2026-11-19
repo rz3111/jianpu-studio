@@ -474,49 +474,22 @@
               </div>
             </div>
 
-            <!-- OMR 视觉识别定位热区 (支持点击大图 + 交互修谱) -->
-            <div id="omrPreviewContainer" class="hidden space-y-2.5">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-1.5">
-                  <span class="text-xs font-bold text-slate-700">五线谱定位与交互修谱：</span>
-                </div>
-                <label class="inline-flex items-center text-xs text-indigo-600 font-semibold cursor-pointer">
-                  <input type="checkbox" id="toggleOmrOverlay" checked onchange="renderOmrCanvas()" class="rounded text-indigo-600 mr-1.5">
-                  <span>显示标注框</span>
-                </label>
+            <!-- 左侧状态导向卡 (五线谱展开于中间大图工作台) -->
+            <div id="omrLeftStatusCard" class="hidden bg-gradient-to-br from-violet-50/90 to-indigo-50/70 border border-violet-200/80 rounded-2xl p-3.5 space-y-2.5 text-xs shadow-2xs">
+              <div class="font-bold text-violet-950 flex items-center justify-between">
+                <span class="flex items-center space-x-1.5">
+                  <span class="w-2 h-2 rounded-full bg-violet-600 animate-pulse"></span>
+                  <span>五线谱已在中间工作台展开</span>
+                </span>
+                <span id="omrLeftStatusCount" class="text-[10px] bg-violet-200/80 text-violet-800 px-2 py-0.5 rounded-full font-mono font-bold">0 个音符</span>
               </div>
-
-              <!-- 交互修谱快捷工具栏 (Dolce 悦谱风格) -->
-              <div id="omrInteractiveDock" class="bg-slate-900 text-white rounded-xl p-2 shadow-md flex flex-wrap items-center justify-between gap-1.5 text-xs">
-                <div class="flex items-center space-x-1 min-w-0">
-                  <span class="text-[10px] text-slate-400">选中:</span>
-                  <span id="omrSelectedNoteBadge" class="font-mono-score font-bold px-1.5 py-0.5 rounded bg-indigo-500/30 text-indigo-300 text-[11px] border border-indigo-500/40 truncate max-w-[100px]">未选择</span>
-                </div>
-                <!-- 快捷操作按钮组 -->
-                <div class="flex items-center space-x-1">
-                  <button onclick="omrAdjustPitch(1)" title="升半音 (+半音)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono text-[11px] transition">♯</button>
-                  <button onclick="omrAdjustPitch(-1)" title="降半音 (-半音)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono text-[11px] transition">♭</button>
-                  <button onclick="omrAdjustDiatonic(1)" title="向上移动一个音级 (如 1->2)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-indigo-200 text-[11px] transition">↑高</button>
-                  <button onclick="omrAdjustDiatonic(-1)" title="向下移动一个音级 (如 2->1)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-indigo-200 text-[11px] transition">↓低</button>
-                  <button onclick="omrCycleDuration()" title="切换时值 (全/二分/四分/八分)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[11px] transition">♩时值</button>
-                  <button onclick="omrDeleteSelectedNote()" title="删除误识别音符" class="px-1.5 py-0.5 rounded bg-rose-900/60 hover:bg-rose-800 text-rose-300 text-[11px] transition">🗑️</button>
-                </div>
-              </div>
-
-              <!-- 乐谱画布容器 -->
-              <div class="w-full min-h-[220px] max-h-[460px] overflow-auto bg-slate-900/5 rounded-2xl border border-slate-200/90 p-2.5 flex items-center justify-center shadow-inner relative group select-none">
-                <canvas id="omrCanvas" style="max-width: 100%; height: auto; object-fit: contain; display: block; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); cursor: crosshair;"></canvas>
-              </div>
-
-              <!-- 修谱交互技巧提示卡 -->
-              <div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200/80 rounded-xl p-2 leading-relaxed">
-                <span class="font-semibold text-indigo-700">💡 交互修谱指南：</span>
-                点击乐谱中方框可选中音符；上下拖动直接变音并实时试听；点击五线谱空白位置可手动补音；按 Delete 键可删除。
-              </div>
-
-              <div id="omrStatsBadge" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 flex items-center space-x-1.5">
-                <span>✅ 已识别到五线谱组与音符</span>
-              </div>
+              <p class="text-violet-700/90 text-[11px] leading-relaxed">
+                为提供最佳视觉与操作体验，五线谱原图已置于中间宽屏区域。您可在中间大图上轻松核对、拖动音符改音或手动补音，确认无误后一键转为出版级简谱。
+              </p>
+              <button onclick="switchCenterView('omr')" class="w-full py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-semibold text-xs transition shadow-2xs cursor-pointer flex items-center justify-center space-x-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <span>聚焦中间五线谱校对工作台</span>
+              </button>
             </div>
 
             <!-- 内置五线谱测试示例 -->
@@ -584,8 +557,99 @@
       <!-- ======================================================== -->
       <div class="col-span-12 lg:col-span-8 xl:col-span-6 flex flex-col space-y-4 relative min-w-0">
 
-        <!-- 艺术乐谱展示纸 (Musician's Parchment) -->
-        <div class="art-parchment p-5 sm:p-7 flex-1 flex flex-col animate-fadeInUp delay-1 pb-24 sm:pb-28">
+        <!-- 中间工作台模式切换栏 (出版级简谱 / 五线谱原图定位与交互校对) -->
+        <div class="flex items-center justify-between bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-xs">
+          <div class="flex items-center space-x-1.5">
+            <button id="btnViewJianpu" onclick="switchCenterView('jianpu')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-indigo-600 text-white shadow-xs cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>📄 出版级简谱</span>
+            </button>
+            <button id="btnViewOmr" onclick="switchCenterView('omr')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-1.5 cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span>🎼 五线谱定位与交互修谱</span>
+              <span id="centerOmrBadgeCount" class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700 hidden">0音</span>
+            </button>
+          </div>
+          
+          <div id="centerOmrTopAction" class="hidden items-center space-x-2">
+            <button onclick="confirmOmrAndSwitchToJianpu()" class="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer">
+              <span>✨ 确认谱面无误，生成简谱 →</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- 视图 A：五线谱原图定位与交互修谱大图工作台 (全宽展开，舒适交互) -->
+        <!-- ======================================================== -->
+        <div id="centerOmrWorkspace" class="hidden art-glass rounded-2xl p-5 sm:p-7 flex-1 flex flex-col space-y-4 animate-fadeInUp pb-24 sm:pb-28">
+          
+          <!-- 顶栏说明与快速确认按钮 -->
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+            <div>
+              <h3 class="text-base sm:text-lg font-bold text-slate-900 flex items-center space-x-2">
+                <span>🎼 五线谱原图高精定位与交互修谱</span>
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">在大图上直接微调音级、补音或删除杂质；核对无误后点击右侧按钮生成标准简谱</p>
+            </div>
+            <div class="flex items-center space-x-3">
+              <label class="inline-flex items-center text-xs text-indigo-600 font-semibold cursor-pointer">
+                <input type="checkbox" id="toggleOmrOverlay" checked onchange="renderOmrCanvas()" class="rounded text-indigo-600 mr-1.5">
+                <span>显示识别标注框</span>
+              </label>
+              <button onclick="confirmOmrAndSwitchToJianpu()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5 cursor-pointer">
+                <span>✨ 确认无误，生成简谱 →</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 交互修谱快捷工具栏 (全宽陈列，操作舒适) -->
+          <div id="omrInteractiveDock" class="bg-slate-900 text-white rounded-2xl p-3 shadow-md flex flex-wrap items-center justify-between gap-2.5 text-xs">
+            <div class="flex items-center space-x-2 min-w-0">
+              <span class="text-xs text-slate-400">当前选中音符:</span>
+              <span id="omrSelectedNoteBadge" class="font-mono-score font-bold px-2.5 py-1 rounded-lg bg-indigo-500/30 text-indigo-300 text-xs border border-indigo-500/40">未选择 (点击谱面方框选中)</span>
+            </div>
+            <!-- 快捷操作按钮组 -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button onclick="omrAdjustPitch(1)" title="升半音 (+半音)" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono text-xs font-bold transition">♯ +半音</button>
+              <button onclick="omrAdjustPitch(-1)" title="降半音 (-半音)" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono text-xs font-bold transition">♭ -半音</button>
+              <button onclick="omrAdjustDiatonic(1)" title="向上移动一个音级 (如 1->2)" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-200 text-xs font-semibold transition">↑ 高一度</button>
+              <button onclick="omrAdjustDiatonic(-1)" title="向下移动一个音级 (如 2->1)" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-200 text-xs font-semibold transition">↓ 低一度</button>
+              <button onclick="omrCycleDuration()" title="切换时值 (全/二分/四分/八分)" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-semibold transition">♩ 切换时值</button>
+              <button onclick="omrDeleteSelectedNote()" title="删除误识别音符" class="px-2.5 py-1 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-300 text-xs font-semibold transition">🗑️ 删除此音</button>
+            </div>
+          </div>
+
+          <!-- 宽屏大图乐谱画布容器 (居中高清晰度，支持滚动) -->
+          <div class="w-full min-h-[380px] max-h-[660px] overflow-auto bg-slate-900/5 rounded-2xl border border-slate-200/90 p-4 flex items-center justify-center shadow-inner relative group select-none">
+            <canvas id="omrCanvas" style="max-width: 100%; height: auto; object-fit: contain; display: block; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); cursor: crosshair;"></canvas>
+          </div>
+
+          <!-- 交互修谱指南与统计徽章 -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="text-xs text-slate-500 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 leading-relaxed flex-1">
+              <span class="font-semibold text-indigo-700">💡 交互修谱指南：</span>
+              点击谱上绿框选中音符；按住音符上下拖动可直接变音并实时试听；点击五线谱空白区域直接补加音符；按键盘 Delete 键删除杂质。
+            </div>
+            <div id="omrStatsBadge" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2 flex items-center space-x-1.5 whitespace-nowrap">
+              <span>✅ 已识别到五线谱组与音符</span>
+            </div>
+          </div>
+
+          <!-- 底部确认导向横幅 (居中显眼) -->
+          <div class="p-4 bg-gradient-to-r from-indigo-50/90 to-purple-50/90 border border-indigo-200/70 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+            <div class="text-xs text-indigo-950 font-medium">
+              <span>乐谱核对无误后，点击右侧按钮生成标准简谱，即可进入播放试听与导出排版。</span>
+            </div>
+            <button onclick="confirmOmrAndSwitchToJianpu()" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer whitespace-nowrap">
+              <span>✨ 确认谱面，生成出版级简谱 →</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- 视图 B：出版级简谱乐谱展示纸 (Musician's Parchment) -->
+        <!-- ======================================================== -->
+        <div id="centerJianpuWorkspace" class="art-parchment p-5 sm:p-7 flex-1 flex flex-col animate-fadeInUp delay-1 pb-24 sm:pb-28">
           
           <!-- 乐谱标题与谱头元信息 -->
           <div class="border-b-2 border-slate-800/10 pb-4 mb-5 text-center">
@@ -2418,7 +2482,21 @@
         isDragging: false
       };
 
-      document.getElementById('omrPreviewContainer').classList.remove('hidden');
+      // 更新顶部徽章与左侧状态卡
+      const badgeCountEl = document.getElementById('centerOmrBadgeCount');
+      if (badgeCountEl) {
+        badgeCountEl.textContent = `${detectedNotes.length}音`;
+        badgeCountEl.classList.remove('hidden');
+      }
+      const leftStatusCard = document.getElementById('omrLeftStatusCard');
+      const leftStatusCount = document.getElementById('omrLeftStatusCount');
+      if (leftStatusCard && leftStatusCount) {
+        leftStatusCount.textContent = `${detectedNotes.length} 个音符`;
+        leftStatusCard.classList.remove('hidden');
+      }
+
+      // 自动切换至中间【五线谱大图定位与校对工作台】供用户审阅修谱
+      switchCenterView('omr');
       renderOmrCanvas();
       updateOmrToolbarBadge();
 
@@ -2437,7 +2515,53 @@
       updateHeaderLabels();
       renderJianpuScore();
       syncRawTextFromNotes();
-      showToast(`五线谱高精识别完成！提取到 ${STATE.notes.length} 个音符，可在下方交互修谱`, 'success');
+      showToast(`五线谱已在中间工作台展开！请核对音符，确认后点击生成简谱`, 'success');
+    }
+
+    // ========================================================================
+    // 中间工作台主视图切换 (出版级简谱 <--> 五线谱原图交互修谱)
+    // ========================================================================
+    function switchCenterView(view) {
+      const jianpuWs = document.getElementById('centerJianpuWorkspace');
+      const omrWs = document.getElementById('centerOmrWorkspace');
+      const btnJianpu = document.getElementById('btnViewJianpu');
+      const btnOmr = document.getElementById('btnViewOmr');
+      const topCta = document.getElementById('centerOmrTopAction');
+
+      const activeClass = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-indigo-600 text-white shadow-xs cursor-pointer';
+      const inactiveClass = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-1.5 cursor-pointer';
+
+      if (view === 'omr') {
+        if (!STATE.omrData || !STATE.omrData.img) {
+          showToast('请先在左侧上传五线谱图片或选择测试示例', 'info');
+          return;
+        }
+        omrWs.classList.remove('hidden');
+        jianpuWs.classList.add('hidden');
+        btnOmr.className = activeClass;
+        btnJianpu.className = inactiveClass;
+        if (topCta) topCta.classList.remove('hidden');
+        renderOmrCanvas();
+      } else {
+        jianpuWs.classList.remove('hidden');
+        omrWs.classList.add('hidden');
+        btnJianpu.className = activeClass;
+        btnOmr.className = inactiveClass;
+        if (topCta) topCta.classList.add('hidden');
+        renderJianpuScore();
+      }
+    }
+
+    // 确认五线谱校对完成，一键切换成简谱
+    function confirmOmrAndSwitchToJianpu() {
+      if (STATE.omrData && STATE.omrData.notes) {
+        STATE.notes = STATE.omrData.notes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
+      }
+      updateHeaderLabels();
+      renderJianpuScore();
+      syncRawTextFromNotes();
+      switchCenterView('jianpu');
+      showToast('🎉 谱面已确认！已为您生成出版级简谱', 'success');
     }
 
     // 渲染带有交互标记框的 OMR 画布
