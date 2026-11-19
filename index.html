@@ -302,6 +302,11 @@
           <span class="font-medium text-slate-700 text-[11px] tracking-wide" id="engineStatusIndicator">AI 音律分析引擎已就绪</span>
         </div>
 
+        <a href="https://github.com/rz3111/jianpu-studio" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white hover:bg-indigo-600 transition shadow-sm" title="访问 GitHub 开源项目仓库">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          <span>GitHub 仓库</span>
+        </a>
+
         <button onclick="showHelpModal()" class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-white/80 rounded-xl transition border border-transparent hover:border-slate-200/60 cursor-pointer" title="使用说明与调优技巧">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </button>
@@ -621,19 +626,27 @@
             </button>
           </div>
 
-          <!-- 导出功能组 -->
-          <div class="flex items-center space-x-2">
-            <button onclick="exportJianpuPng()" class="inline-flex items-center px-3 py-2 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="导出高清出版级简谱图片">
-              <svg class="w-3.5 h-3.5 mr-1.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              <span>高清图片</span>
+          <!-- 导出功能组 (集成开源生态格式: 图片 / 矢量SVG / MIDI / MusicXML / 文本) -->
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <button onclick="exportJianpuPng()" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="导出高清出版级简谱图片">
+              <svg class="w-3.5 h-3.5 mr-1 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>图片</span>
             </button>
-            <button onclick="exportMidiFile()" class="inline-flex items-center px-3 py-2 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="下载标准 MIDI 乐谱文件">
-              <svg class="w-3.5 h-3.5 mr-1.5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
-              <span>MIDI 文件</span>
+            <button onclick="exportJianpuSvg()" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="导出矢量 SVG 乐谱 (矢量无损缩放 / 出版印刷排版)">
+              <svg class="w-3.5 h-3.5 mr-1 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+              <span>矢量 SVG</span>
             </button>
-            <button onclick="copyJianpuText()" class="inline-flex items-center px-3 py-2 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="复制纯文本简谱符号代码">
-              <svg class="w-3.5 h-3.5 mr-1.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-              <span>复制代码</span>
+            <button onclick="exportMidiFile()" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="下载标准 MIDI 乐谱文件">
+              <svg class="w-3.5 h-3.5 mr-1 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
+              <span>MIDI</span>
+            </button>
+            <button onclick="exportMusicXml()" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="导出行业标准 MusicXML (可直接导入 MuseScore / Dolce悦谱 / Finale / Sibelius)">
+              <svg class="w-3.5 h-3.5 mr-1 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>MusicXML</span>
+            </button>
+            <button onclick="copyJianpuText()" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="复制纯文本简谱符号代码">
+              <svg class="w-3.5 h-3.5 mr-1 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+              <span>复制</span>
             </button>
           </div>
 
@@ -2599,6 +2612,171 @@
      * 10. 高保真导出 (PNG 高清图 / 标准 MIDI / 纯文本代码)
      * ============================================================================
      */
+    /**
+     * 导出矢量 SVG 乐谱文件 (借鉴 flufy3d/JianpuRender & ssb22/jianpu-ly)
+     * 支持在 Illustrator / Inkscape / Word 中无损排版与高清矢量印刷
+     */
+    function exportJianpuSvg() {
+      const svgEl = document.getElementById('jianpuScoreSvg');
+      if (!svgEl) {
+        showToast('没有可导出的简谱', 'warning');
+        return;
+      }
+      const title = document.getElementById('scoreTitleInput').value || '简谱乐谱';
+      const keyStr = document.getElementById('headerKeyDisplay').textContent;
+      const timeStr = document.getElementById('headerTimeDisplay').textContent;
+      const bpmStr = `♩ = ${STATE.bpm}`;
+
+      const svgClone = svgEl.cloneNode(true);
+      const vb = svgEl.viewBox.baseVal;
+      const headerH = 110;
+      const totalW = vb.width || 800;
+      const totalH = (vb.height || 600) + headerH;
+
+      let fullSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + totalW + ' ' + totalH + '" width="100%" height="100%">\n';
+      fullSvg += '  <style>\n';
+      fullSvg += '    text { font-family: "JetBrains Mono", "Noto Sans SC", sans-serif; }\n';
+      fullSvg += '    .score-title { font-family: "Noto Serif SC", serif; font-size: 26px; font-weight: bold; fill: #0f172a; text-anchor: middle; }\n';
+      fullSvg += '    .score-meta { font-size: 14px; font-weight: 600; fill: #334155; }\n';
+      fullSvg += '  </style>\n';
+      fullSvg += '  <rect width="100%" height="100%" fill="#ffffff"/>\n';
+      fullSvg += '  <text x="' + (totalW / 2) + '" y="48" class="score-title">' + title + '</text>\n';
+      fullSvg += '  <text x="40" y="86" class="score-meta" text-anchor="start">' + keyStr + '   ' + timeStr + '</text>\n';
+      fullSvg += '  <text x="' + (totalW - 40) + '" y="86" class="score-meta" text-anchor="end">' + bpmStr + '</text>\n';
+      fullSvg += '  <line x1="40" y1="102" x2="' + (totalW - 40) + '" y2="102" stroke="#cbd5e1" stroke-width="1"/>\n';
+      fullSvg += '  <g transform="translate(0, ' + headerH + ')">\n';
+      fullSvg += svgClone.innerHTML;
+      fullSvg += '\n  </g>\n</svg>';
+
+      const blob = new Blob([fullSvg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `${title}_简谱.svg`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast('已导出矢量 SVG 乐谱文件！', 'success');
+    }
+
+    /**
+     * 导出行业标准 MusicXML 乐谱文件 (借鉴 lodebar2026/dolce, oemer, MuseScore 标准)
+     * 支持无缝导入 MuseScore / Finale / Sibelius / Dolce 悦谱等所有主流音乐软件
+     */
+    function exportMusicXml() {
+      if (!STATE.notes || STATE.notes.length === 0) {
+        showToast('没有可导出的乐谱音符', 'warning');
+        return;
+      }
+      const title = document.getElementById('scoreTitleInput').value || '简谱乐谱';
+      const [beats, beatType] = STATE.timeSig.split('/').map(Number);
+      const divisions = 4; // 1拍 = 4 divisions (支持16分音符)
+
+      // 调号五度循环表
+      const fifthsMap = {
+        'C': 0, 'G': 1, 'D': 2, 'A': 3, 'E': 4, 'B': 5, 'F#': 6,
+        'F': -1, 'Bb': -2, 'Eb': -3, 'Ab': -4, 'Db': -5
+      };
+      const fifths = fifthsMap[STATE.key] || 0;
+
+      // MIDI音高转音名与八度
+      const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      function midiToXmlPitch(midi) {
+        const octave = Math.floor(midi / 12) - 1;
+        const noteIdx = midi % 12;
+        const rawName = noteNames[noteIdx];
+        const step = rawName.charAt(0);
+        const alter = rawName.includes('#') ? 1 : 0;
+        return { step, alter, octave };
+      }
+
+      function getXmlNoteType(duration) {
+        if (duration >= 4) return 'whole';
+        if (duration >= 2) return 'half';
+        if (duration >= 1) return 'quarter';
+        if (duration >= 0.5) return 'eighth';
+        return '16th';
+      }
+
+      let xml = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n';
+      xml += '<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">\n';
+      xml += '<score-partwise version="3.1">\n';
+      xml += '  <work><work-title>' + title + '</work-title></work>\n';
+      xml += '  <part-list>\n';
+      xml += '    <score-part id="P1">\n';
+      xml += '      <part-name>简谱主旋律</part-name>\n';
+      xml += '    </score-part>\n';
+      xml += '  </part-list>\n';
+      xml += '  <part id="P1">\n';
+
+      let measureNum = 1;
+      let measureBeatSum = 0;
+      let currentMeasureNotes = [];
+      const measureCapacity = beats * (4 / beatType);
+
+      function flushMeasure() {
+        xml += '    <measure number="' + measureNum + '">\n';
+        if (measureNum === 1) {
+          xml += '      <attributes>\n';
+          xml += '        <divisions>' + divisions + '</divisions>\n';
+          xml += '        <key><fifths>' + fifths + '</fifths></key>\n';
+          xml += '        <time><beats>' + beats + '</beats><beat-type>' + beatType + '</beat-type></time>\n';
+          xml += '        <clef><sign>G</sign><line>2</line></clef>\n';
+          xml += '      </attributes>\n';
+          xml += '      <direction placement="above">\n';
+          xml += '        <sound tempo="' + STATE.bpm + '"/>\n';
+          xml += '      </direction>\n';
+        }
+
+        for (const n of currentMeasureNotes) {
+          xml += '      <note>\n';
+          if (n.isRest || n.midi <= 0) {
+            xml += '        <rest/>\n';
+          } else {
+            const p = midiToXmlPitch(n.midi);
+            xml += '        <pitch>\n';
+            xml += '          <step>' + p.step + '</step>\n';
+            if (p.alter !== 0) xml += '          <alter>' + p.alter + '</alter>\n';
+            xml += '          <octave>' + p.octave + '</octave>\n';
+            xml += '        </pitch>\n';
+          }
+          const durDiv = Math.max(1, Math.round(n.duration * divisions));
+          xml += '        <duration>' + durDiv + '</duration>\n';
+          xml += '        <type>' + getXmlNoteType(n.duration) + '</type>\n';
+          if (n.lyric && n.lyric.trim()) {
+            xml += '        <lyric><text>' + n.lyric.trim() + '</text></lyric>\n';
+          }
+          xml += '      </note>\n';
+        }
+        xml += '    </measure>\n';
+        measureNum++;
+        measureBeatSum = 0;
+        currentMeasureNotes = [];
+      }
+
+      for (const note of STATE.notes) {
+        currentMeasureNotes.push(note);
+        measureBeatSum += note.duration;
+        if (measureBeatSum >= measureCapacity - 0.05) {
+          flushMeasure();
+        }
+      }
+      if (currentMeasureNotes.length > 0) {
+        flushMeasure();
+      }
+
+      xml += '  </part>\n';
+      xml += '</score-partwise>\n';
+
+      const blob = new Blob([xml], { type: 'application/vnd.recordare.musicxml+xml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `${title}.musicxml`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast('已导出标准 MusicXML 乐谱文件（可直接导入 MuseScore / Dolce 打开）！', 'success');
+    }
+
     function exportJianpuPng() {
       const svgEl = document.getElementById('jianpuScoreSvg');
       if (!svgEl) {
