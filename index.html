@@ -1,0 +1,2814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>简谱工坊 · Jianpu Studio | 现代艺术智能转谱工坊</title>
+  <!-- 加载 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 加载 Google Fonts 字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+      --accent-glow: rgba(99, 102, 241, 0.25);
+    }
+
+    body {
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0f172a;
+      background-color: #0c0f1d;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* 现代艺术流体背景层 */
+    .art-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+                  radial-gradient(circle at 90% 10%, rgba(236, 72, 153, 0.10) 0%, transparent 45%),
+                  radial-gradient(circle at 50% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+                  #f8fafc;
+      overflow: hidden;
+    }
+
+    /* 浮动艺术光晕球 */
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.6;
+      pointer-events: none;
+      animation: orbFloat 22s ease-in-out infinite alternate;
+    }
+    .orb-1 {
+      width: 450px;
+      height: 450px;
+      top: -100px;
+      left: -80px;
+      background: linear-gradient(135deg, #818cf8, #c084fc);
+    }
+    .orb-2 {
+      width: 500px;
+      height: 500px;
+      bottom: -150px;
+      right: -100px;
+      background: linear-gradient(135deg, #f472b6, #a78bfa);
+      animation-duration: 28s;
+      animation-delay: -7s;
+    }
+    .orb-3 {
+      width: 320px;
+      height: 320px;
+      top: 40%;
+      left: 55%;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      animation-duration: 20s;
+      animation-delay: -12s;
+    }
+
+    @keyframes orbFloat {
+      0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+      50% { transform: translate(60px, 40px) scale(1.08) rotate(180deg); }
+      100% { transform: translate(-40px, 80px) scale(0.95) rotate(360deg); }
+    }
+
+    .font-mono-score {
+      font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+    }
+    .font-art-serif {
+      font-family: 'Noto Serif SC', 'Cinzel', serif;
+    }
+
+    /* 超感现代艺术毛玻璃卡片 */
+    .art-glass {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 20px 45px -12px rgba(99, 102, 241, 0.08), 
+                  0 4px 16px -2px rgba(15, 23, 42, 0.04),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .art-glass:hover {
+      box-shadow: 0 24px 50px -10px rgba(99, 102, 241, 0.12), 
+                  0 8px 24px -4px rgba(15, 23, 42, 0.05),
+                  inset 0 1px 0 rgba(255, 255, 255, 1);
+    }
+
+    /* 顶栏精致毛玻璃 */
+    header.art-nav {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(24px) saturate(200%);
+      -webkit-backdrop-filter: blur(24px) saturate(200%);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+    }
+
+    /* 艺术发光按钮 */
+    .art-glow-btn {
+      position: relative;
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 40%, #8b5cf6 80%, #a855f7 100%);
+      background-size: 200% auto;
+      color: white;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
+      overflow: hidden;
+    }
+    .art-glow-btn:hover {
+      background-position: right center;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 26px rgba(99, 102, 241, 0.45);
+    }
+    .art-glow-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 3px 12px rgba(99, 102, 241, 0.3);
+    }
+    .art-glow-btn::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -60%;
+      width: 40%;
+      height: 200%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+      transform: rotate(25deg);
+      transition: all 0.75s ease;
+    }
+    .art-glow-btn:hover::after {
+      left: 140%;
+    }
+
+    /* 播放绿色发光按钮 */
+    .play-glow-btn {
+      background: linear-gradient(135deg, #059669 0%, #10b981 60%, #34d399 100%);
+      box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .play-glow-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 26px rgba(16, 185, 129, 0.45);
+    }
+
+    /* 出版级乐谱纸张效果 */
+    .art-parchment {
+      background-color: #ffffff;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.02) 0%, transparent 60%),
+        radial-gradient(circle at 100% 100%, rgba(236, 72, 153, 0.02) 0%, transparent 50%);
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08), 
+                  0 0 0 1px rgba(226, 232, 240, 0.9),
+                  inset 0 0 40px rgba(248, 250, 252, 0.6);
+      border-radius: 1.25rem;
+    }
+
+    /* 录音脉冲动画 */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.96); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.65); }
+      70% { transform: scale(1.02); box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.96); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .recording-pulse {
+      animation: pulse-ring 1.6s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+    }
+
+    /* 声音动效条 (Header Visualizer) */
+    .sound-bar {
+      width: 3px;
+      height: 14px;
+      background: linear-gradient(to top, #6366f1, #a855f7);
+      border-radius: 3px;
+      animation: soundWave 1.2s ease-in-out infinite alternate;
+    }
+    .sound-bar:nth-child(2) { animation-delay: 0.2s; height: 18px; }
+    .sound-bar:nth-child(3) { animation-delay: 0.4s; height: 10px; }
+    .sound-bar:nth-child(4) { animation-delay: 0.1s; height: 16px; }
+    .sound-bar:nth-child(5) { animation-delay: 0.3s; height: 12px; }
+    @keyframes soundWave {
+      0% { transform: scaleY(0.4); opacity: 0.6; }
+      100% { transform: scaleY(1.3); opacity: 1; }
+    }
+
+    /* 优雅入场渐现动效 */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-fadeInUp {
+      animation: fadeInUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .delay-1 { animation-delay: 0.08s; opacity: 0; }
+    .delay-2 { animation-delay: 0.16s; opacity: 0; }
+    .delay-3 { animation-delay: 0.24s; opacity: 0; }
+
+    /* 示例卡片悬浮动效 */
+    .sample-pill {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+    .sample-pill:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px -2px rgba(99, 102, 241, 0.2);
+    }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* 乐谱单音选中发光 */
+    .note-token-selected rect {
+      fill: #ede9fe !important;
+      stroke: #8b5cf6 !important;
+      stroke-width: 1.5px !important;
+      filter: drop-shadow(0 2px 8px rgba(139, 92, 246, 0.35));
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- 艺术背景装饰层 -->
+  <div class="art-bg">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
+  <!-- 顶部艺术导航栏 (已去掉开源导出按钮，替换为优雅的现代艺术状态栏) -->
+  <header class="art-nav sticky top-0 z-40 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- 品牌 Logo 与标题 -->
+      <div class="flex items-center space-x-3.5">
+        <div class="relative group cursor-pointer">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-500/25 transition-transform duration-300 group-hover:scale-105 group-hover:rotate-2">
+            <span class="font-mono-score tracking-tighter">1=C</span>
+          </div>
+          <!-- 悬浮微光 -->
+          <div class="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-300 -z-10"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-800 tracking-tight font-art-serif">
+              简谱工坊
+            </h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 rounded-full border border-indigo-200/60 shadow-2xs">
+              AI Atelier · v2.0
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-500 hidden sm:block tracking-wide">
+            智能音乐引擎 · 高保真音频人声转谱 · 五线谱光学识谱 (OMR)
+          </p>
+        </div>
+      </div>
+
+      <!-- 右侧：艺术状态指示器与音律动效 -->
+      <div class="flex items-center space-x-3">
+        <div class="hidden sm:flex items-center space-x-2 bg-slate-100/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/60 text-xs text-slate-600">
+          <div class="flex items-end space-x-1 h-3.5 px-0.5">
+            <div class="sound-bar"></div>
+            <div class="sound-bar"></div>
+            <div class="sound-bar"></div>
+            <div class="sound-bar"></div>
+            <div class="sound-bar"></div>
+          </div>
+          <span class="font-medium text-slate-700 text-[11px] tracking-wide" id="engineStatusIndicator">AI 音律分析引擎已就绪</span>
+        </div>
+
+        <button onclick="showHelpModal()" class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-white/80 rounded-xl transition border border-transparent hover:border-slate-200/60 cursor-pointer" title="使用说明与调优技巧">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- 全局提示 Toast -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2.5 pointer-events-none"></div>
+
+  <!-- 主工作区 -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+
+      <!-- ========================================== -->
+      <!-- 左侧：输入源、分析可视化与乐理调校 (5 列) -->
+      <!-- ========================================== -->
+      <div class="lg:col-span-5 flex flex-col space-y-6">
+
+        <!-- 1. 模式选择与主输入卡片 -->
+        <div class="art-glass rounded-2xl p-4 sm:p-5 animate-fadeInUp">
+          
+          <!-- 模式切换 Tabs (艺术流体切换) -->
+          <div class="grid grid-cols-2 bg-slate-100/90 p-1 rounded-xl mb-4 border border-slate-200/50">
+            <button id="tabAudio" onclick="switchInputTab('audio')" class="py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-white text-indigo-600 shadow-sm transition-all duration-300 flex items-center justify-center space-x-1.5 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+              <span>音频 / 哼唱转简谱</span>
+            </button>
+            <button id="tabImage" onclick="switchInputTab('image')" class="py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition-all duration-300 flex items-center justify-center space-x-1.5 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span>五线谱图片转简谱</span>
+            </button>
+          </div>
+
+          <!-- Panel 1: 音频转简谱 -->
+          <div id="panelAudio" class="space-y-4">
+            
+            <!-- 上传拖拽区域 -->
+            <div id="audioDropZone" class="group relative border-2 border-dashed border-indigo-200/80 hover:border-indigo-500 rounded-2xl p-6 text-center transition-all duration-300 bg-gradient-to-b from-white/60 to-indigo-50/30 hover:to-indigo-50/60 cursor-pointer overflow-hidden">
+              <input type="file" id="audioFileInput" accept="audio/*" class="hidden" />
+              <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              </div>
+              <p class="text-sm font-semibold text-slate-800">点击或拖拽上传音频片段</p>
+              <p class="text-xs text-slate-400 mt-1">支持 MP3 / WAV / M4A / FLAC / AAC（人声哼唱、口哨、钢琴/吉他单音）</p>
+            </div>
+
+            <!-- 麦克风实时清唱录音栏 -->
+            <div class="flex items-center justify-between bg-white/90 border border-slate-200/70 rounded-2xl p-3.5 shadow-2xs">
+              <div class="flex items-center space-x-3">
+                <button id="btnRecordMic" onclick="toggleMicRecording()" class="w-11 h-11 rounded-2xl bg-rose-500 hover:bg-rose-600 active:scale-95 text-white flex items-center justify-center shadow-md shadow-rose-500/25 transition cursor-pointer" title="点击开始/结束哼唱录音">
+                  <svg id="micIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                </button>
+                <div>
+                  <div id="micStatusTitle" class="text-xs sm:text-sm font-semibold text-slate-800">麦克风哼唱 / 独奏实时录音</div>
+                  <div id="micStatusSub" class="text-[11px] text-slate-400">戴耳机清唱或离麦克风10-20cm效果最佳</div>
+                </div>
+              </div>
+              <span id="recordTimer" class="font-mono-score text-xs font-bold px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hidden">00:00</span>
+            </div>
+
+            <!-- 动态波形与音高水流谱 (尺寸增大 + 悬浮点击看大图) -->
+            <div id="waveformContainer" class="hidden space-y-3 pt-1">
+              <div class="flex items-center justify-between text-xs text-slate-500 px-1">
+                <div class="flex items-center space-x-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span id="audioFileName" class="font-semibold text-slate-800 truncate max-w-[200px]">音频已解析</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-full font-medium">点击图表可放大查看</span>
+                  <span id="audioDurationLabel" class="font-mono-score text-indigo-600 font-bold">0.0s</span>
+                </div>
+              </div>
+              
+              <!-- 现代艺术波形画布 (高度加大至 112px，支持点击看大图) -->
+              <div class="relative w-full h-28 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-md group cursor-pointer" onclick="openPreviewModal('waveform')" title="点击放大查看全景音频波形大图">
+                <canvas id="waveformCanvas" class="w-full h-full block"></canvas>
+                <div class="absolute top-2 right-2 text-[10px] font-mono text-slate-400 bg-slate-900/90 border border-slate-700/80 px-2 py-0.5 rounded-md flex items-center space-x-1">
+                  <span>WAVEFORM & ENVELOPE</span>
+                </div>
+                <!-- 悬浮提示放大遮罩 -->
+                <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center text-white text-xs font-semibold space-x-1.5">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                  <span>点击查看音频波形大图</span>
+                </div>
+              </div>
+
+              <!-- 音高提取与切分时间线 (高度加大至 160px，支持点击看大图) -->
+              <div class="relative w-full h-40 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-md group cursor-pointer" onclick="openPreviewModal('pitch')" title="点击放大查看高精音高切分水流谱大图">
+                <canvas id="pitchCanvas" class="w-full h-full block"></canvas>
+                <div class="absolute top-2 right-2 text-[10px] font-mono text-indigo-300 bg-slate-900/90 border border-indigo-900/80 px-2 py-0.5 rounded-md flex items-center space-x-1">
+                  <span>PITCH CONTOUR & NOTE PIANO-ROLL</span>
+                </div>
+                <!-- 悬浮提示放大遮罩 -->
+                <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center text-white text-xs font-semibold space-x-1.5">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                  <span>点击放大查看高精音高切分水流谱大图</span>
+                </div>
+              </div>
+
+              <!-- 重新分析按钮 -->
+              <button onclick="runAudioTranscription()" class="art-glow-btn w-full py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center space-x-2 cursor-pointer shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span>重新执行精准音高提取 & 简谱生成</span>
+              </button>
+            </div>
+
+            <!-- 内置经典高准确度演示音频 -->
+            <div class="pt-2 border-t border-slate-200/60">
+              <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span>快速体验演示旋律：</span>
+                <span class="text-[10px] text-indigo-500 font-normal">点击即时合成与转谱</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <button onclick="loadDemoAudio('twinkle')" class="sample-pill py-2 px-2.5 text-xs font-semibold bg-white/90 hover:bg-indigo-50/80 text-indigo-700 rounded-xl border border-indigo-100/80 transition truncate text-center cursor-pointer shadow-2xs">
+                  ✨ 小星星
+                </button>
+                <button onclick="loadDemoAudio('jasmine')" class="sample-pill py-2 px-2.5 text-xs font-semibold bg-white/90 hover:bg-indigo-50/80 text-indigo-700 rounded-xl border border-indigo-100/80 transition truncate text-center cursor-pointer shadow-2xs">
+                  🌸 茉莉花
+                </button>
+                <button onclick="loadDemoAudio('ode')" class="sample-pill py-2 px-2.5 text-xs font-semibold bg-white/90 hover:bg-indigo-50/80 text-indigo-700 rounded-xl border border-indigo-100/80 transition truncate text-center cursor-pointer shadow-2xs">
+                  🎻 欢乐颂
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Panel 2: 五线谱图片转简谱 -->
+          <div id="panelImage" class="space-y-4 hidden">
+            <!-- 图片上传拖放区 -->
+            <div id="imageDropZone" class="group border-2 border-dashed border-violet-200/80 hover:border-violet-500 rounded-2xl p-6 text-center transition-all duration-300 bg-gradient-to-b from-white/60 to-violet-50/30 hover:to-violet-50/60 cursor-pointer">
+              <input type="file" id="imageFileInput" accept="image/*" class="hidden" />
+              <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-violet-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
+              <p class="text-sm font-semibold text-slate-800">上传五线谱图片或乐谱截图</p>
+              <p class="text-xs text-slate-400 mt-1">清晰水平的印刷体单行/多行乐谱（支持 PNG / JPG / WEBP）</p>
+            </div>
+
+            <!-- 谱号选择与说明 -->
+            <div class="flex items-center justify-between bg-white/90 border border-slate-200/70 rounded-2xl p-3 shadow-2xs">
+              <span class="text-xs font-semibold text-slate-700">五线谱谱号类型：</span>
+              <div class="flex space-x-3">
+                <label class="inline-flex items-center text-xs text-slate-700 cursor-pointer">
+                  <input type="radio" name="clefType" value="treble" checked onchange="reprocessSheetImage()" class="text-indigo-600 focus:ring-indigo-500 mr-1.5">
+                  <span>高音谱号 (𝄞)</span>
+                </label>
+                <label class="inline-flex items-center text-xs text-slate-700 cursor-pointer">
+                  <input type="radio" name="clefType" value="bass" onchange="reprocessSheetImage()" class="text-indigo-600 focus:ring-indigo-500 mr-1.5">
+                  <span>低音谱号 (𝄢)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- OMR 视觉识别定位热区 (防变形保持真实比例 + 放大至高质展示 + 支持点击看大图) -->
+            <div id="omrPreviewContainer" class="hidden space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-xs font-bold text-slate-700">光学识谱 (OMR) 定位与标注：</span>
+                  <span class="text-[10px] text-violet-600 bg-violet-50 border border-violet-200/80 px-2 py-0.5 rounded-full font-medium">点击可看大图</span>
+                </div>
+                <label class="inline-flex items-center text-xs text-indigo-600 font-semibold cursor-pointer">
+                  <input type="checkbox" id="toggleOmrOverlay" checked onchange="renderOmrCanvas()" class="rounded text-indigo-600 mr-1.5">
+                  <span>显示识别标注框</span>
+                </label>
+              </div>
+              
+              <!-- 容器采用自适应居中，彻底消除 CSS flex 压缩变形问题，加大高度展示 -->
+              <div class="w-full min-h-[220px] max-h-[460px] overflow-auto bg-slate-900/5 rounded-2xl border border-slate-200/90 p-3 flex items-center justify-center shadow-inner relative group cursor-pointer" onclick="openPreviewModal('omr')" title="点击查看超清大图">
+                <canvas id="omrCanvas" style="max-width: 100%; height: auto; object-fit: contain; display: block; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);"></canvas>
+                
+                <!-- 悬浮放大提示层 -->
+                <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-2xl flex items-center justify-center text-white text-xs font-semibold space-x-1.5">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                  <span>点击放大查看五线谱超清大图与标注</span>
+                </div>
+              </div>
+              <div id="omrStatsBadge" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 flex items-center space-x-1.5">
+                <span>✅ 已识别到五线谱组与音符</span>
+              </div>
+            </div>
+
+            <!-- 内置五线谱测试示例 -->
+            <div class="pt-2 border-t border-slate-200/60">
+              <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">测试五线谱光学识谱：</div>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="loadDemoSheetImage('scale')" class="sample-pill py-2 px-2.5 text-xs font-semibold bg-white/90 hover:bg-violet-50 text-violet-700 rounded-xl border border-violet-100 transition cursor-pointer text-center shadow-2xs">
+                  🎼 C大调音阶五线谱
+                </button>
+                <button onclick="loadDemoSheetImage('canon')" class="sample-pill py-2 px-2.5 text-xs font-semibold bg-white/90 hover:bg-violet-50 text-violet-700 rounded-xl border border-violet-100 transition cursor-pointer text-center shadow-2xs">
+                  🎼 卡农经典乐句五线谱
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- 2. 乐理与精准识别参数卡片 (核心优化区域) -->
+        <div class="art-glass rounded-2xl p-4 sm:p-5 space-y-4 animate-fadeInUp delay-1">
+          <div class="flex items-center justify-between border-b border-slate-200/60 pb-3">
+            <h2 class="text-xs sm:text-sm font-bold text-slate-800 flex items-center space-x-2">
+              <span class="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+              </span>
+              <span>乐理参数 & 算法精度优化</span>
+            </h2>
+            <span id="detectedKeyHint" class="text-xs font-bold text-indigo-600 bg-indigo-50/90 border border-indigo-100 px-2.5 py-0.5 rounded-full">
+              调性：1=C
+            </span>
+          </div>
+
+          <!-- 调号与拍号 -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">简谱调号 (Key)</label>
+              <select id="selectKey" onchange="onParamsChanged()" class="w-full text-xs sm:text-sm bg-white/90 border border-slate-200/80 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs">
+                <option value="AUTO">✨ 智能自动识别调性</option>
+                <option value="C" selected>1 = C (C大调)</option>
+                <option value="G">1 = G (G大调)</option>
+                <option value="D">1 = D (D大调)</option>
+                <option value="A">1 = A (A大调)</option>
+                <option value="E">1 = E (E大调)</option>
+                <option value="F">1 = F (F大调)</option>
+                <option value="Bb">1 = bB (降B大调)</option>
+                <option value="Eb">1 = bE (降E大调)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">拍号 (Time Signature)</label>
+              <select id="selectTimeSig" onchange="onParamsChanged()" class="w-full text-xs sm:text-sm bg-white/90 border border-slate-200/80 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs">
+                <option value="4/4" selected>4/4 拍 (四四拍)</option>
+                <option value="3/4">3/4 拍 (三四拍)</option>
+                <option value="2/4">2/4 拍 (二四拍)</option>
+                <option value="6/8">6/8 拍 (八六拍)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 智能音准吸附 (大幅解决人声跑调、颤音导致音符乱跳的问题) -->
+          <div class="bg-indigo-50/50 border border-indigo-100/80 rounded-xl p-2.5">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs font-semibold text-indigo-950 flex items-center space-x-1.5">
+                  <span>🎯 智能调式吸附 (Scale Snapping)</span>
+                  <span class="text-[10px] text-indigo-600 bg-indigo-100/80 px-1.5 py-0.2 rounded font-mono">精准保真</span>
+                </div>
+                <div class="text-[10px] text-slate-500 mt-0.5">将微弱偏音/颤音自动吸附到当前调式正音，消除混乱杂升降号</div>
+              </div>
+              <select id="selectScaleMode" onchange="onParamsChanged()" class="text-xs bg-white border border-indigo-200 rounded-lg px-2 py-1 text-indigo-800 font-semibold focus:outline-none">
+                <option value="major" selected>自然大调 (推荐)</option>
+                <option value="pentatonic">五声音阶 (宫商角徵羽)</option>
+                <option value="chromatic">自由半音 (完全自由)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 速度 BPM 与自动对齐 -->
+          <div>
+            <div class="flex justify-between items-center text-xs font-semibold text-slate-600 mb-1.5">
+              <span class="flex items-center space-x-1">
+                <span>歌唱速度 (BPM)</span>
+              </span>
+              <div class="flex items-center space-x-2">
+                <button onclick="estimateAndSetAutoBpm()" class="px-2 py-0.5 text-[11px] font-medium text-indigo-600 bg-white hover:bg-indigo-50 rounded border border-indigo-200 shadow-2xs cursor-pointer" title="根据起音间隔自动推算您的实际歌唱速度">
+                  ⚡ 智能测速
+                </button>
+                <span id="bpmValueLabel" class="font-mono-score font-bold text-indigo-600 text-sm">108 BPM</span>
+              </div>
+            </div>
+            <input type="range" id="sliderBpm" min="50" max="180" value="108" oninput="onBpmInput(this.value)" class="w-full accent-indigo-600 cursor-pointer" />
+          </div>
+
+          <!-- 节奏量化精度与同音切分灵敏度 -->
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <span class="block text-[11px] font-semibold text-slate-600 mb-1">时值对齐精度</span>
+              <div class="grid grid-cols-2 rounded-xl bg-slate-100/80 p-0.5 border border-slate-200/50 text-center">
+                <button id="quant8" onclick="setQuantGrid(0.5)" class="py-1 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-2xs cursor-pointer">八分音符</button>
+                <button id="quant16" onclick="setQuantGrid(0.25)" class="py-1 text-xs font-semibold rounded-lg text-slate-600 cursor-pointer">十六分音符</button>
+              </div>
+            </div>
+
+            <div>
+              <span class="block text-[11px] font-semibold text-slate-600 mb-1">同音字切分敏感度</span>
+              <select id="selectOnsetSens" onchange="if(STATE.currentAudioBuffer) runAudioTranscription();" class="w-full text-xs bg-white/90 border border-slate-200/80 rounded-xl px-2.5 py-1.5 text-slate-800 focus:outline-none shadow-2xs">
+                <option value="high">敏锐 (适合快节奏连续同音)</option>
+                <option value="medium" selected>均衡 (标准歌唱连音)</option>
+                <option value="low">平滑 (合并轻微抖动)</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ========================================== -->
+      <!-- 右侧：艺术级标准简谱展示纸、试听与编辑 (7 列) -->
+      <!-- ========================================== -->
+      <div class="lg:col-span-7 flex flex-col space-y-4">
+
+        <!-- 顶部操作工具栏 -->
+        <div class="art-glass rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 animate-fadeInUp delay-2">
+          
+          <!-- 试听控制 -->
+          <div class="flex items-center space-x-2">
+            <button id="btnPlayToggle" onclick="togglePlayback()" class="play-glow-btn inline-flex items-center px-4 py-2 text-white text-xs sm:text-sm font-semibold rounded-xl cursor-pointer">
+              <svg id="playIcon" class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <span id="playBtnText">试听简谱</span>
+            </button>
+            <button onclick="stopPlayback()" class="p-2 text-slate-600 hover:text-slate-900 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 cursor-pointer shadow-2xs" title="停止播放">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+            </button>
+          </div>
+
+          <!-- 导出功能组 -->
+          <div class="flex items-center space-x-2">
+            <button onclick="exportJianpuPng()" class="inline-flex items-center px-3 py-2 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="导出高清出版级简谱图片">
+              <svg class="w-3.5 h-3.5 mr-1.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>高清图片</span>
+            </button>
+            <button onclick="exportMidiFile()" class="inline-flex items-center px-3 py-2 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="下载标准 MIDI 乐谱文件">
+              <svg class="w-3.5 h-3.5 mr-1.5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
+              <span>MIDI 文件</span>
+            </button>
+            <button onclick="copyJianpuText()" class="inline-flex items-center px-3 py-2 text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-100 rounded-xl transition border border-slate-200/60 shadow-2xs cursor-pointer" title="复制纯文本简谱符号代码">
+              <svg class="w-3.5 h-3.5 mr-1.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+              <span>复制代码</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- 艺术乐谱展示纸 (Musician's Parchment) -->
+        <div class="art-parchment p-6 sm:p-8 flex-1 flex flex-col animate-fadeInUp delay-3">
+          
+          <!-- 乐谱标题与谱头元信息 -->
+          <div class="border-b-2 border-slate-800/10 pb-4 mb-5 text-center">
+            <input type="text" id="scoreTitleInput" value="小星星 (示例旋律)" oninput="renderJianpuScore()" class="w-full text-center text-xl sm:text-2xl font-bold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-600 focus:outline-none pb-1 transition font-art-serif tracking-tight" placeholder="点击输入乐谱曲名..." />
+            
+            <div class="flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-700 mt-4 px-2">
+              <div class="flex items-center space-x-6">
+                <span id="headerKeyDisplay" class="font-mono-score text-indigo-900 font-bold bg-indigo-50/70 px-2 py-0.5 rounded">1 = C</span>
+                <span id="headerTimeDisplay" class="font-mono-score text-slate-800">4/4</span>
+              </div>
+              <div class="font-mono-score text-slate-600 flex items-center space-x-1">
+                <span>♩ = </span>
+                <span id="headerBpmDisplay" class="font-bold text-indigo-700">108</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- SVG 简谱排版容器 (支持自适应与高保真矢量绘制) -->
+          <div id="jianpuSvgContainer" class="w-full overflow-x-auto min-h-[300px] flex flex-col items-center justify-center">
+            <!-- 动态生成的现代简谱 SVG 将呈现于此 -->
+          </div>
+
+          <!-- 单音交互微调浮条 (点击任意音符弹出) -->
+          <div id="noteEditorBar" class="hidden mt-4 p-3 bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-200/80 rounded-2xl flex flex-wrap items-center justify-between gap-2 shadow-sm">
+            <div class="flex items-center space-x-2 text-xs font-bold text-indigo-950">
+              <span class="w-2 h-2 rounded-full bg-indigo-600 animate-ping"></span>
+              <span>编辑选中音符 #<span id="editNoteIndex">1</span>：</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button onclick="adjustSelectedNote('pitch', 1)" class="px-2.5 py-1 bg-white hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 cursor-pointer shadow-2xs">音高 +1</button>
+              <button onclick="adjustSelectedNote('pitch', -1)" class="px-2.5 py-1 bg-white hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 cursor-pointer shadow-2xs">音高 -1</button>
+              <button onclick="adjustSelectedNote('octave', 1)" class="px-2.5 py-1 bg-white hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 cursor-pointer shadow-2xs">高八度 •</button>
+              <button onclick="adjustSelectedNote('octave', -1)" class="px-2.5 py-1 bg-white hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 cursor-pointer shadow-2xs">低八度 .</button>
+              <button onclick="adjustSelectedNote('duration', 0.5)" class="px-2.5 py-1 bg-white hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 cursor-pointer shadow-2xs">加半拍</button>
+              <button onclick="adjustSelectedNote('duration', -0.5)" class="px-2.5 py-1 bg-white hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 cursor-pointer shadow-2xs">减半拍</button>
+              <button onclick="deleteSelectedNote()" class="px-2.5 py-1 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl cursor-pointer shadow-2xs">删除</button>
+            </div>
+          </div>
+
+          <!-- 简谱文本代码快速修改编辑区 -->
+          <div class="mt-6 pt-4 border-t border-slate-200/70">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
+                <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                <span>简谱符号文本代码 (双向实时同步)：</span>
+              </span>
+              <span class="text-[11px] text-slate-400 font-mono">1' (高音) 5, (低音) 5- (二分) 5_ (八分) 0 (休止)</span>
+            </div>
+            <textarea id="rawJianpuInput" rows="2" onchange="parseRawJianpuText(this.value)" class="w-full font-mono-score text-xs bg-slate-50/80 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition shadow-inner" placeholder="1 1 5 5 | 6 6 5 - | ..."></textarea>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- 超清大图与分析全景查看器 (Lightbox Modal) -->
+  <div id="previewModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-50 hidden items-center justify-center p-3 sm:p-6 transition-all duration-300">
+    <div class="art-glass bg-slate-900/95 border border-white/20 rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-slate-100">
+      
+      <!-- 模态框顶部工具条 -->
+      <div class="px-5 py-3.5 border-b border-slate-700/80 flex items-center justify-between bg-slate-900/80">
+        <div class="flex items-center space-x-3">
+          <span id="previewModalBadge" class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
+            FULLVIEW
+          </span>
+          <h3 id="previewModalTitle" class="text-sm sm:text-base font-bold text-white tracking-tight">
+            全景超清分析预览
+          </h3>
+        </div>
+
+        <!-- 缩放与操作按钮 -->
+        <div class="flex items-center space-x-2">
+          <button onclick="zoomPreview(0.2)" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer" title="放大">
+            🔍+
+          </button>
+          <button onclick="zoomPreview(-0.2)" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer" title="缩小">
+            🔍-
+          </button>
+          <button onclick="resetPreviewZoom()" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer" title="重置大小">
+            100%
+          </button>
+          <button onclick="downloadPreviewImage()" class="px-2.5 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition cursor-pointer flex items-center space-x-1" title="下载大图">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span class="hidden sm:inline">保存图片</span>
+          </button>
+          <button onclick="closePreviewModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer text-base font-bold ml-2">
+            &times;
+          </button>
+        </div>
+      </div>
+
+      <!-- 模态框超清内容显示区 (支持滚轮与拖动平移) -->
+      <div id="previewModalContent" class="flex-1 overflow-auto p-4 flex items-center justify-center bg-slate-950/80 min-h-[360px] relative select-none">
+        <canvas id="modalCanvas" style="max-width: 100%; height: auto; transition: transform 0.2s ease; transform-origin: center center; display: block; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></canvas>
+      </div>
+
+      <!-- 底部快捷提示条 -->
+      <div class="px-5 py-2.5 bg-slate-900 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+        <span>按 ESC 键或点击右上角关闭 · 支持点击上方按钮无损缩放</span>
+        <span id="previewModalMeta" class="font-mono text-slate-500">100% 原始解析度</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 艺术页脚 -->
+  <footer class="py-6 text-center text-xs text-slate-400">
+    <div class="flex items-center justify-center space-x-2">
+      <span>简谱工坊 · Jianpu Studio</span>
+      <span>•</span>
+      <span>Web Audio API & High-Resolution Pitch Tracking</span>
+      <span>•</span>
+      <span>现代艺术音乐工坊</span>
+    </div>
+  </footer>
+
+  <!-- 使用说明与技巧模态框 -->
+  <div id="helpModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div class="art-glass rounded-3xl max-w-lg w-full shadow-2xl border border-white/80 p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+          <span>🎵 如何获得最精准的简谱识别效果？</span>
+        </h3>
+        <button onclick="closeHelpModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+        <div class="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100">
+          <p class="font-bold text-indigo-900 mb-1">1. 哼唱与录音建议：</p>
+          <p>• 保持平稳音高，用「哒、啦、哼」等清晰音节发音，音节之间有轻微起伏更利于捕捉节拍。</p>
+          <p>• 距离麦克风 10~20 厘米，尽量避免背景杂音或回音。</p>
+        </div>
+        <div class="p-3 bg-violet-50/70 rounded-xl border border-violet-100">
+          <p class="font-bold text-violet-900 mb-1">2. 智能调式吸附 (Scale Snapping)：</p>
+          <p>• 默认开启「自然大调吸附」，会自动修正人声细微的跑调与颤音，将音高规整为标准简谱的 1 2 3 4 5 6 7，避免多余的升降号出现。</p>
+        </div>
+        <div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-100">
+          <p class="font-bold text-emerald-900 mb-1">3. 速度与时值量化：</p>
+          <p>• 点击「⚡ 智能测速」，系统会自动根据您哼唱的节奏推算 BPM 并吸附音符时值。</p>
+        </div>
+      </div>
+      <div class="text-center pt-2">
+        <button onclick="closeHelpModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition cursor-pointer text-xs">我知道了，开始创作</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 核心 JavaScript 引擎 -->
+  <script>
+    /**
+     * ============================================================================
+     * 1. 全局状态与乐理常量
+     * ============================================================================
+     */
+    const STATE = {
+      notes: [],              // 当前简谱音符: [{ midi: 60, duration: 1, isRest: false }, ...]
+      key: 'C',               // 调号 ('C', 'G', 'D', 'A', 'E', 'F', 'Bb', 'Eb')
+      timeSig: '4/4',         // 拍号
+      bpm: 108,               // 速度
+      quantGrid: 0.5,         // 量化最小单位 (0.5 = 八分音符, 0.25 = 十六分音符)
+      scaleMode: 'major',     // 调式吸附模式: 'major' | 'pentatonic' | 'chromatic'
+      selectedNoteIdx: -1,    // 当前选中编辑的音符索引
+      isPlaying: false,       // 是否正在播放
+      playbackTimers: [],     // 播放定时器
+      playbackMasterGain: null, // 播放总控音量节点 (用于点击停止时 0 毫秒绝对静音)
+      activeOscillators: [],  // 当前正在发声/计划发声的所有振荡器节点
+      audioCtx: null,         // Web Audio 上下文
+      currentAudioBuffer: null, // AudioBuffer
+      mediaRecorder: null,    // 录音器
+      recordedChunks: [],     // 录音数据
+      recordStartTime: 0,
+      recordTimerInterval: null,
+      omrData: null,          // 五线谱分析结果
+      pitchContourData: null, // 音高与音符时序，用于 Piano Roll 绘制
+      previewZoom: 1.0,       // 大图预览缩放倍率
+      currentPreviewType: null // 当前大图预览类型: 'waveform' | 'pitch' | 'omr'
+    };
+
+    // 各大调基准 MIDI (C4 = 60)
+    const KEY_BASE_MIDI = {
+      'C': 60,
+      'G': 55,
+      'D': 62,
+      'A': 57,
+      'E': 64,
+      'F': 65,
+      'Bb': 58,
+      'Eb': 63
+    };
+
+    // 半音偏移到大调简谱唱名映射
+    const SEMITONE_TO_JIANPU = [
+      { degree: 1, accidental: '' },   // 0: 1
+      { degree: 1, accidental: '#' },  // 1: #1
+      { degree: 2, accidental: '' },   // 2: 2
+      { degree: 3, accidental: 'b' },  // 3: b3
+      { degree: 3, accidental: '' },   // 4: 3
+      { degree: 4, accidental: '' },   // 5: 4
+      { degree: 4, accidental: '#' },  // 6: #4
+      { degree: 5, accidental: '' },   // 7: 5
+      { degree: 5, accidental: '#' },  // 8: #5
+      { degree: 6, accidental: '' },   // 9: 6
+      { degree: 7, accidental: 'b' },  // 10: b7
+      { degree: 7, accidental: '' }    // 11: 7
+    ];
+
+    // 大调调性检测权重
+    const MAJOR_PROFILE = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+
+    /**
+     * ============================================================================
+     * 2. UI 交互与模态框
+     * ============================================================================
+     */
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const colors = {
+        info: 'bg-slate-900/95 text-white border-slate-700/80 shadow-slate-900/20',
+        success: 'bg-emerald-600/95 text-white border-emerald-400 shadow-emerald-600/25',
+        warning: 'bg-amber-600/95 text-white border-amber-400 shadow-amber-600/25',
+        error: 'bg-rose-600/95 text-white border-rose-400 shadow-rose-600/25'
+      };
+      toast.className = `pointer-events-auto px-4 py-2.5 rounded-2xl shadow-xl border text-xs sm:text-sm font-semibold transition-all duration-300 transform translate-y-2 opacity-0 flex items-center space-x-2 backdrop-blur-md ${colors[type] || colors.info}`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+      
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function showHelpModal() {
+      const m = document.getElementById('helpModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+    function closeHelpModal() {
+      const m = document.getElementById('helpModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function switchInputTab(tab) {
+      const tabAudio = document.getElementById('tabAudio');
+      const tabImage = document.getElementById('tabImage');
+      const panelAudio = document.getElementById('panelAudio');
+      const panelImage = document.getElementById('panelImage');
+
+      if (tab === 'audio') {
+        tabAudio.className = 'py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-white text-indigo-600 shadow-sm transition-all duration-300 flex items-center justify-center space-x-1.5 cursor-pointer';
+        tabImage.className = 'py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition-all duration-300 flex items-center justify-center space-x-1.5 cursor-pointer';
+        panelAudio.classList.remove('hidden');
+        panelImage.classList.add('hidden');
+      } else {
+        tabImage.className = 'py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-white text-violet-600 shadow-sm transition-all duration-300 flex items-center justify-center space-x-1.5 cursor-pointer';
+        tabAudio.className = 'py-2.5 px-3 text-xs sm:text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition-all duration-300 flex items-center justify-center space-x-1.5 cursor-pointer';
+        panelImage.classList.remove('hidden');
+        panelAudio.classList.add('hidden');
+      }
+    }
+
+    function onBpmInput(val) {
+      STATE.bpm = parseInt(val, 10);
+      document.getElementById('bpmValueLabel').textContent = `${STATE.bpm} BPM`;
+      document.getElementById('headerBpmDisplay').textContent = STATE.bpm;
+    }
+
+    function setQuantGrid(grid) {
+      STATE.quantGrid = grid;
+      const q8 = document.getElementById('quant8');
+      const q16 = document.getElementById('quant16');
+      if (grid === 0.5) {
+        q8.className = 'py-1 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-2xs cursor-pointer';
+        q16.className = 'py-1 text-xs font-semibold rounded-lg text-slate-600 cursor-pointer';
+      } else {
+        q16.className = 'py-1 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-2xs cursor-pointer';
+        q8.className = 'py-1 text-xs font-semibold rounded-lg text-slate-600 cursor-pointer';
+      }
+      if (STATE.currentAudioBuffer) {
+        runAudioTranscription();
+      }
+    }
+
+    function onParamsChanged() {
+      const keyVal = document.getElementById('selectKey').value;
+      STATE.timeSig = document.getElementById('selectTimeSig').value;
+      STATE.scaleMode = document.getElementById('selectScaleMode').value;
+
+      if (keyVal === 'AUTO') {
+        STATE.key = detectBestKey(STATE.notes);
+        showToast(`已智能识别调性为：1=${STATE.key}`, 'success');
+      } else {
+        STATE.key = keyVal;
+      }
+
+      updateHeaderLabels();
+      renderJianpuScore();
+      syncRawTextFromNotes();
+    }
+
+    function updateHeaderLabels() {
+      const displayKey = STATE.key.replace('b', '♭');
+      document.getElementById('detectedKeyHint').textContent = `调性：1=${displayKey}`;
+      document.getElementById('headerKeyDisplay').textContent = `1 = ${displayKey}`;
+      document.getElementById('headerTimeDisplay').textContent = STATE.timeSig;
+      document.getElementById('headerBpmDisplay').textContent = STATE.bpm;
+    }
+
+    /**
+     * ============================================================================
+     * 3. Web Audio 上下文与文件拖拽监听
+     * ============================================================================
+     */
+    function getAudioContext() {
+      if (!STATE.audioCtx) {
+        STATE.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (STATE.audioCtx.state === 'suspended') {
+        STATE.audioCtx.resume();
+      }
+      return STATE.audioCtx;
+    }
+
+    function setupFileListeners() {
+      const audioZone = document.getElementById('audioDropZone');
+      const audioInput = document.getElementById('audioFileInput');
+      audioZone.addEventListener('click', () => audioInput.click());
+      audioZone.addEventListener('dragover', (e) => { e.preventDefault(); audioZone.classList.add('border-indigo-500', 'bg-indigo-50/60'); });
+      audioZone.addEventListener('dragleave', () => audioZone.classList.remove('border-indigo-500', 'bg-indigo-50/60'));
+      audioZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        audioZone.classList.remove('border-indigo-500', 'bg-indigo-50/60');
+        if (e.dataTransfer.files.length > 0) handleAudioFile(e.dataTransfer.files[0]);
+      });
+      audioInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleAudioFile(e.target.files[0]);
+      });
+
+      const imageZone = document.getElementById('imageDropZone');
+      const imageInput = document.getElementById('imageFileInput');
+      imageZone.addEventListener('click', () => imageInput.click());
+      imageZone.addEventListener('dragover', (e) => { e.preventDefault(); imageZone.classList.add('border-violet-500', 'bg-violet-50/60'); });
+      imageZone.addEventListener('dragleave', () => imageZone.classList.remove('border-violet-500', 'bg-violet-50/60'));
+      imageZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        imageZone.classList.remove('border-violet-500', 'bg-violet-50/60');
+        if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
+      });
+      imageInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleImageFile(e.target.files[0]);
+      });
+    }
+
+    async function handleAudioFile(file) {
+      try {
+        showToast('正在解码音频并高精度提取音高...', 'info');
+        const arrayBuffer = await file.arrayBuffer();
+        const ctx = getAudioContext();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        STATE.currentAudioBuffer = audioBuffer;
+
+        const cleanName = file.name.replace(/\.[^/.]+$/, '');
+        document.getElementById('scoreTitleInput').value = cleanName;
+        document.getElementById('audioFileName').textContent = file.name;
+        document.getElementById('audioDurationLabel').textContent = `${audioBuffer.duration.toFixed(1)}s`;
+        document.getElementById('waveformContainer').classList.remove('hidden');
+
+        drawWaveform(audioBuffer);
+        runAudioTranscription();
+      } catch (err) {
+        console.error(err);
+        showToast('音频解码失败，请确认文件格式有效（推荐 MP3/WAV）', 'error');
+      }
+    }
+
+    // 麦克风实时哼唱录音
+    async function toggleMicRecording() {
+      const btn = document.getElementById('btnRecordMic');
+      const title = document.getElementById('micStatusTitle');
+      const sub = document.getElementById('micStatusSub');
+      const timerEl = document.getElementById('recordTimer');
+
+      if (STATE.mediaRecorder && STATE.mediaRecorder.state === 'recording') {
+        STATE.mediaRecorder.stop();
+        btn.classList.remove('recording-pulse');
+        title.textContent = '麦克风哼唱 / 独奏实时录音';
+        sub.textContent = '录音完成，正在生成高保真简谱...';
+        timerEl.classList.add('hidden');
+        clearInterval(STATE.recordTimerInterval);
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        STATE.recordedChunks = [];
+        STATE.mediaRecorder = new MediaRecorder(stream);
+
+        STATE.mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) STATE.recordedChunks.push(e.data);
+        };
+
+        STATE.mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(STATE.recordedChunks, { type: 'audio/webm' });
+          const arrayBuffer = await blob.arrayBuffer();
+          const ctx = getAudioContext();
+          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+          STATE.currentAudioBuffer = audioBuffer;
+
+          document.getElementById('scoreTitleInput').value = '麦克风清唱录音';
+          document.getElementById('audioFileName').textContent = '麦克风录音.webm';
+          document.getElementById('audioDurationLabel').textContent = `${audioBuffer.duration.toFixed(1)}s`;
+          document.getElementById('waveformContainer').classList.remove('hidden');
+
+          drawWaveform(audioBuffer);
+          runAudioTranscription();
+          sub.textContent = '点击红色按钮可重新录制';
+        };
+
+        STATE.mediaRecorder.start();
+        btn.classList.add('recording-pulse');
+        title.textContent = '正在聆听您的哼唱...';
+        sub.textContent = '请清晰唱出旋律，再次点击红色按钮结束';
+        timerEl.classList.remove('hidden');
+        STATE.recordStartTime = Date.now();
+        timerEl.textContent = '00:00';
+
+        STATE.recordTimerInterval = setInterval(() => {
+          const sec = Math.floor((Date.now() - STATE.recordStartTime) / 1000);
+          const m = String(Math.floor(sec / 60)).padStart(2, '0');
+          const s = String(sec % 60).padStart(2, '0');
+          timerEl.textContent = `${m}:${s}`;
+        }, 500);
+      } catch (err) {
+        console.error(err);
+        showToast('无法访问麦克风，请检查浏览器权限设置', 'error');
+      }
+    }
+
+    // 绘制现代艺术波形
+    function drawWaveform(audioBuffer) {
+      const canvas = document.getElementById('waveformCanvas');
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width || 400;
+      canvas.height = rect.height || 80;
+      const ctx = canvas.getContext('2d');
+      const data = audioBuffer.getChannelData(0);
+
+      // 背景渐变
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, '#090d16');
+      bgGrad.addColorStop(1, '#020617');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const step = Math.ceil(data.length / canvas.width);
+      const amp = canvas.height / 2;
+
+      // 波形渐变
+      const lineGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      lineGrad.addColorStop(0, '#6366f1');
+      lineGrad.addColorStop(0.5, '#a855f7');
+      lineGrad.addColorStop(1, '#ec4899');
+      ctx.strokeStyle = lineGrad;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+
+      for (let i = 0; i < canvas.width; i++) {
+        let min = 1.0;
+        let max = -1.0;
+        for (let j = 0; j < step; j++) {
+          const datum = data[(i * step) + j];
+          if (datum < min) min = datum;
+          if (datum > max) max = datum;
+        }
+        ctx.moveTo(i, (1 + min) * amp);
+        ctx.lineTo(i, (1 + max) * amp);
+      }
+      ctx.stroke();
+    }
+
+    /**
+     * ============================================================================
+     * 4. 优化版 YIN 基频提取算法 (带动态自适应阈值与可信度度量)
+     * ============================================================================
+     */
+    /**
+     * 高精度多候选音高检测算法 (借鉴国际开源音频项目 pYIN / Aubio / Basic Pitch)
+     * 核心特性：多候选极小值检出 + 次谐波校验 (Sub-harmonic Verification) + 八度跳变抑制
+     */
+    function detectPitchYIN(buffer, sampleRate, prevMidi = -1) {
+      const halfLen = Math.floor(buffer.length / 2);
+      const minTau = Math.max(2, Math.floor(sampleRate / 1050)); // ~C6 (1046Hz)
+      const maxTau = Math.min(halfLen - 2, Math.floor(sampleRate / 68));  // ~C2 (65Hz)
+      const yinBuffer = new Float32Array(maxTau + 2);
+
+      // 1. 平方差函数 (加速步长计算)
+      for (let tau = 0; tau <= maxTau + 1; tau++) {
+        let sum = 0;
+        for (let i = 0; i < halfLen; i += 2) {
+          const delta = buffer[i] - buffer[i + tau];
+          sum += delta * delta;
+        }
+        yinBuffer[tau] = sum * 2;
+      }
+
+      // 2. 累积均值归一化差 (CMNDF)
+      yinBuffer[0] = 1;
+      let runningSum = 0;
+      for (let tau = 1; tau <= maxTau + 1; tau++) {
+        runningSum += yinBuffer[tau];
+        yinBuffer[tau] *= tau / (runningSum || 1);
+      }
+
+      // 3. 多候选极值检出 (搜集所有局部谷底候选 tau)
+      const candidates = [];
+      for (let tau = minTau; tau <= maxTau; tau++) {
+        if (yinBuffer[tau] < 0.48 && 
+            (tau === minTau || yinBuffer[tau] <= yinBuffer[tau - 1]) && 
+            (tau === maxTau || yinBuffer[tau] <= yinBuffer[tau + 1])) {
+          
+          // 局部抛物线插值提高精度
+          let betterTau = tau;
+          if (tau > 0 && tau < maxTau) {
+            const s0 = yinBuffer[tau - 1];
+            const s1 = yinBuffer[tau];
+            const s2 = yinBuffer[tau + 1];
+            const denom = 2 * (2 * s1 - s2 - s0);
+            if (denom !== 0) {
+              betterTau = tau + (s2 - s0) / denom;
+            }
+          }
+          const freq = sampleRate / betterTau;
+          const midi = 69 + 12 * Math.log2(freq / 440);
+          candidates.push({ tau: betterTau, cmndf: yinBuffer[tau], freq, midi });
+        }
+      }
+
+      if (candidates.length === 0) return { freq: -1, clarity: 0 };
+
+      // 按谷底深度排序
+      candidates.sort((a, b) => a.cmndf - b.cmndf);
+
+      // 4. 次谐波与八度抑制逻辑 (防止人声共振峰引起的八度过低或过高错误)
+      let best = candidates[0];
+
+      // 检查是否存在较高频的真基频 (避免把双倍周期当成基频，即避免八度偏低)
+      for (let i = 1; i < candidates.length; i++) {
+        const cand = candidates[i];
+        // 如果候选周期大约是最佳周期的一半 (即高八度)，且其差值也很小 (<0.22)
+        if (cand.tau < best.tau * 0.6 && cand.cmndf < 0.22) {
+          best = cand;
+          break;
+        }
+      }
+
+      // 若有上一帧连续音高作为上下文参考，优先选择与前帧连续平滑的候选
+      if (prevMidi > 0) {
+        for (const cand of candidates) {
+          if (Math.abs(cand.midi - prevMidi) <= 2.2 && cand.cmndf < 0.35) {
+            best = cand;
+            break;
+          }
+        }
+      }
+
+      const clarity = Math.max(0, Math.min(1, 1 - best.cmndf));
+      return { freq: best.freq, clarity, rawMidi: best.midi };
+    }
+
+    /**
+     * 智能调式吸附函数 (Scale Snapping)
+     * 将微弱偏音/颤音吸附到当前调式，避免跑调生成混乱的升降号
+     */
+    function snapPitchToScale(rawMidi, key, mode = 'major') {
+      if (rawMidi <= 0) return -1;
+      if (mode === 'chromatic') return Math.round(rawMidi);
+
+      const baseMidi = KEY_BASE_MIDI[key] || 60;
+      const root = baseMidi % 12;
+      const midiRound = Math.round(rawMidi);
+      const pitchClass = (midiRound % 12 + 12) % 12;
+      const relPitch = (pitchClass - root + 12) % 12;
+
+      // 自然大调音阶 (1 2 3 4 5 6 7) 的半音偏移: 0, 2, 4, 5, 7, 9, 11
+      const majorScale = [0, 2, 4, 5, 7, 9, 11];
+      // 五声音阶 (1 2 3 5 6): 0, 2, 4, 7, 9
+      const pentatonicScale = [0, 2, 4, 7, 9];
+
+      const activeScale = mode === 'pentatonic' ? pentatonicScale : majorScale;
+
+      if (activeScale.includes(relPitch)) {
+        return midiRound;
+      }
+
+      // 寻找最近的调内音
+      let minDiff = Infinity;
+      let bestSnappedMidi = midiRound;
+
+      for (const scaleRel of activeScale) {
+        const diff = Math.abs(rawMidi - (Math.floor(rawMidi / 12) * 12 + (root + scaleRel) % 12));
+        if (diff < minDiff) {
+          minDiff = diff;
+        }
+      }
+
+      // 歌唱误差在 0.45 个半音之内时，吸附到调内音阶
+      for (let offset = -1; offset <= 1; offset++) {
+        const targetClass = ((pitchClass + offset) % 12 + 12) % 12;
+        const targetRel = (targetClass - root + 12) % 12;
+        if (activeScale.includes(targetRel)) {
+          return midiRound + offset;
+        }
+      }
+
+      return midiRound;
+    }
+
+    /**
+     * 智能自动推测歌唱 BPM (基于起音间隔统计)
+     */
+    function estimateAndSetAutoBpm() {
+      if (!STATE.pitchContourData || !STATE.pitchContourData.onsets || STATE.pitchContourData.onsets.length < 3) {
+        showToast('请先录制或加载一段音频后再进行智能测速', 'warning');
+        return;
+      }
+
+      const onsets = STATE.pitchContourData.onsets;
+      const intervals = [];
+      for (let i = 1; i < onsets.length; i++) {
+        const diff = onsets[i] - onsets[i - 1];
+        if (diff >= 0.22 && diff <= 1.4) {
+          intervals.push(diff);
+        }
+      }
+
+      if (intervals.length === 0) {
+        showToast('节奏起伏较平缓，已保持默认速度', 'info');
+        return;
+      }
+
+      intervals.sort((a, b) => a - b);
+      const medianInterval = intervals[Math.floor(intervals.length / 2)];
+      let estimatedBpm = Math.round(60 / medianInterval);
+
+      // 将 BPM 折算到自然流行歌范围 (65 ~ 140)
+      while (estimatedBpm < 65) estimatedBpm *= 2;
+      while (estimatedBpm > 150) estimatedBpm = Math.round(estimatedBpm / 2);
+
+      onBpmInput(estimatedBpm);
+      document.getElementById('sliderBpm').value = estimatedBpm;
+      showToast(`已智能适配您的歌唱速度：${estimatedBpm} BPM`, 'success');
+      runAudioTranscription();
+    }
+
+    /**
+     * ============================================================================
+     * 5. 执行音频精准转简谱 (音高平滑、八度纠偏、同音切分与量化)
+     * ============================================================================
+     */
+    async function runAudioTranscription() {
+      const audioBuffer = STATE.currentAudioBuffer;
+      if (!audioBuffer) return;
+
+      const sampleRate = audioBuffer.sampleRate;
+      const channelData = audioBuffer.getChannelData(0);
+
+      // 支持解析完整音频时长（无截断，最大支持 10 分钟）
+      const maxSamples = Math.min(channelData.length, sampleRate * 600);
+      const totalDurationSec = (maxSamples / sampleRate).toFixed(1);
+      const frameSize = 2048;
+      const hopSize = 512; // ~11.6ms，高时间分辨率兼具高速分析
+      const frames = [];
+
+      const statusEl = document.getElementById('engineStatusIndicator');
+      if (statusEl) statusEl.textContent = `全曲分析中 (0/${Math.round(totalDurationSec)}s)...`;
+
+      // 全局平均能量计算 (采用步长采样优化)
+      let totalRms = 0;
+      let frameCount = 0;
+      for (let i = 0; i + frameSize < maxSamples; i += hopSize * 2) {
+        let sumSq = 0;
+        for (let j = 0; j < frameSize; j += 2) sumSq += channelData[i + j] * channelData[i + j];
+        totalRms += Math.sqrt((sumSq * 2) / frameSize);
+        frameCount++;
+      }
+      const avgRms = totalRms / (frameCount || 1);
+      const silenceThreshold = Math.max(0.005, avgRms * 0.16);
+
+      const onsetSensVal = document.getElementById('selectOnsetSens').value;
+      const onsetFactor = onsetSensVal === 'high' ? 1.18 : (onsetSensVal === 'low' ? 1.42 : 1.28);
+
+      // 1. 逐帧异步提取音高、能量与可信度 (带进度反馈与防卡死出让)
+      let prevRms = 0;
+      const onsetTimes = [];
+      let processedCount = 0;
+
+      for (let i = 0; i + frameSize < maxSamples; i += hopSize) {
+        const slice = channelData.subarray(i, i + frameSize);
+        let sumSq = 0;
+        for (let j = 0; j < frameSize; j += 2) sumSq += slice[j] * slice[j];
+        const rms = Math.sqrt((sumSq * 2) / frameSize);
+        const time = i / sampleRate;
+
+        // 检测起音 (能量骤升即新音符触发)
+        let isOnset = false;
+        if (rms > silenceThreshold && rms > prevRms * onsetFactor && prevRms > 0.001) {
+          isOnset = true;
+          onsetTimes.push(time);
+        }
+        prevRms = rms;
+
+        if (rms < silenceThreshold) {
+          frames.push({ midi: -1, rawMidi: -1, time, clarity: 0, isOnset });
+        } else {
+          const prevDetectedMidi = frames.length > 0 && frames[frames.length - 1].midi > 0 ? frames[frames.length - 1].midi : -1;
+          const { freq, clarity, rawMidi: preciseMidi } = detectPitchYIN(slice, sampleRate, prevDetectedMidi);
+          if (freq > 70 && freq < 1000 && clarity > 0.45) {
+            const rawMidi = 69 + 12 * Math.log2(freq / 440);
+            const snappedMidi = snapPitchToScale(rawMidi, STATE.key, STATE.scaleMode);
+            frames.push({ midi: snappedMidi, rawMidi, time, clarity, isOnset });
+          } else {
+            frames.push({ midi: -1, rawMidi: -1, time, clarity: 0, isOnset });
+          }
+        }
+
+        processedCount++;
+        // 每 400 帧出让一次控制权，避免长时间任务卡顿主线程并实时更新进度
+        if (processedCount % 400 === 0) {
+          const curSec = Math.round(time);
+          const pct = Math.round((time / (maxSamples / sampleRate)) * 100);
+          if (statusEl) statusEl.textContent = `全曲识别中 ${pct}% (${curSec}s/${Math.round(totalDurationSec)}s)...`;
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+
+      if (statusEl) statusEl.textContent = 'AI 音律分析引擎已就绪';
+
+      // 2. 7-frame 窗口中值滤波 (消除瞬时偶发毛刺)
+      const smoothed = frames.map((f, idx) => {
+        if (idx < 3 || idx >= frames.length - 3) return { ...f };
+        const window = [
+          frames[idx - 3].midi, frames[idx - 2].midi, frames[idx - 1].midi,
+          f.midi,
+          frames[idx + 1].midi, frames[idx + 2].midi, frames[idx + 3].midi
+        ].sort((a, b) => a - b);
+        return { ...f, midi: window[3] };
+      });
+
+      // 3. 八度跳变自相关纠错 (Octave-error repair pass)
+      for (let i = 1; i < smoothed.length - 1; i++) {
+        const prev = smoothed[i - 1].midi;
+        const curr = smoothed[i].midi;
+        const next = smoothed[i + 1].midi;
+        if (prev > 0 && curr > 0 && next > 0) {
+          if (Math.abs(curr - prev) >= 11 && Math.abs(curr - prev) <= 13 && Math.abs(prev - next) <= 3) {
+            smoothed[i].midi = prev;
+          }
+        }
+      }
+
+      // 4. 短暂静音空洞填补 (Gap-bridging: <60ms 的短暂微停顿合并为持续音)
+      for (let i = 1; i < smoothed.length - 1; i++) {
+        if (smoothed[i].midi === -1 && smoothed[i - 1].midi > 0 && smoothed[i + 1].midi === smoothed[i - 1].midi) {
+          smoothed[i].midi = smoothed[i - 1].midi;
+        }
+      }
+
+      // 5. 音符分段 (结合起音 Onset 与音高变化)
+      const rawEvents = [];
+      const frameDur = hopSize / sampleRate;
+
+      for (let idx = 0; idx < smoothed.length; idx++) {
+        const f = smoothed[idx];
+        if (rawEvents.length === 0) {
+          rawEvents.push({ midi: f.midi, durSec: frameDur });
+        } else {
+          const last = rawEvents[rawEvents.length - 1];
+          if (last.midi === f.midi && !f.isOnset) {
+            last.durSec += frameDur;
+          } else if (last.midi === f.midi && f.isOnset && last.durSec >= 0.18) {
+            rawEvents.push({ midi: f.midi, durSec: frameDur });
+          } else {
+            rawEvents.push({ midi: f.midi, durSec: frameDur });
+          }
+        }
+      }
+
+      // 6. 过滤超短杂音 (< 75ms) 并精准量化到节拍网格
+      const secPerBeat = 60 / STATE.bpm;
+      const quantizedNotes = [];
+
+      for (const ev of rawEvents) {
+        if (ev.durSec < 0.075) continue;
+        let beats = ev.durSec / secPerBeat;
+        beats = Math.max(STATE.quantGrid, Math.round(beats / STATE.quantGrid) * STATE.quantGrid);
+        beats = Math.min(4, beats);
+
+        if (ev.midi === -1) {
+          if (quantizedNotes.length > 0 && beats >= 0.5) {
+            quantizedNotes.push({ midi: 0, duration: beats, isRest: true });
+          }
+        } else {
+          quantizedNotes.push({ midi: ev.midi, duration: beats, isRest: false });
+        }
+      }
+
+      while (quantizedNotes.length > 0 && quantizedNotes[quantizedNotes.length - 1].isRest) {
+        quantizedNotes.pop();
+      }
+
+      if (quantizedNotes.length === 0) {
+        showToast('未能捕捉到清晰的单音旋律，请贴近麦克风或点击内置示例测试', 'warning');
+        return;
+      }
+
+      STATE.notes = quantizedNotes;
+
+      // 存储用于 Piano Roll 可视化绘制的完整全曲数据
+      STATE.pitchContourData = {
+        frames: smoothed,
+        onsets: onsetTimes,
+        notes: quantizedNotes,
+        duration: maxSamples / sampleRate
+      };
+      drawPitchContourCanvas();
+
+      if (document.getElementById('selectKey').value === 'AUTO') {
+        STATE.key = detectBestKey(STATE.notes);
+      }
+
+      updateHeaderLabels();
+      renderJianpuScore();
+      syncRawTextFromNotes();
+      showToast(`全曲识别完成！共解析 ${STATE.notes.length} 个音符 (${totalDurationSec}s，调性: 1=${STATE.key})`, 'success');
+    }
+
+    // 绘制现代艺术音高与音符时序画布 (Piano Roll)
+    function drawPitchContourCanvas() {
+      const canvas = document.getElementById('pitchCanvas');
+      if (!canvas || !STATE.pitchContourData) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width || 400;
+      canvas.height = rect.height || 96;
+      const ctx = canvas.getContext('2d');
+      const { frames, duration, notes } = STATE.pitchContourData;
+
+      // 背景暗色网格
+      ctx.fillStyle = '#060913';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < canvas.height; y += 16) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // 计算音高 Y 轴映射 (以当前音符范围为准)
+      const validMidis = frames.filter(f => f.midi > 0).map(f => f.midi);
+      if (validMidis.length === 0) return;
+      const minMidi = Math.min(...validMidis) - 2;
+      const maxMidi = Math.max(...validMidis) + 2;
+      const midiSpan = Math.max(12, maxMidi - minMidi);
+
+      const toY = (midi) => canvas.height - ((midi - minMidi) / midiSpan) * (canvas.height - 18) - 9;
+      const toX = (t) => (t / (duration || 1)) * canvas.width;
+
+      // 1. 绘制提取到的连续音高线 (高亮青蓝渐变霓虹光)
+      ctx.beginPath();
+      ctx.strokeStyle = '#00f2fe';
+      ctx.lineWidth = 1.8;
+      let isDrawing = false;
+
+      for (const f of frames) {
+        if (f.midi > 0) {
+          const x = toX(f.time);
+          const y = toY(f.rawMidi > 0 ? f.rawMidi : f.midi);
+          if (!isDrawing) {
+            ctx.moveTo(x, y);
+            isDrawing = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        } else {
+          isDrawing = false;
+        }
+      }
+      ctx.stroke();
+
+      // 2. 绘制量化后的音符块 (半透明圆角药丸胶囊)
+      const secPerBeat = 60 / STATE.bpm;
+      let timeCursor = 0;
+
+      notes.forEach((n, idx) => {
+        const durSec = n.duration * secPerBeat;
+        const x = toX(timeCursor);
+        const w = Math.max(4, toX(durSec));
+        if (!n.isRest && n.midi > 0) {
+          const y = toY(n.midi) - 5;
+          ctx.fillStyle = 'rgba(168, 85, 247, 0.45)';
+          ctx.strokeStyle = '#a855f7';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(x, y, w - 1, 10, 3);
+          ctx.fill();
+          ctx.stroke();
+
+          // 标注简谱唱名
+          const info = midiToJianpuInfo(n.midi, false);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 9px "JetBrains Mono", sans-serif';
+          ctx.fillText(info.text, x + 2, y + 8);
+        }
+        timeCursor += durSec;
+      });
+    }
+
+    // 调性自动评估
+    function detectBestKey(notes) {
+      const pitchClassCounts = new Array(12).fill(0);
+      for (const n of notes) {
+        if (!n.isRest && n.midi > 0) {
+          pitchClassCounts[n.midi % 12] += n.duration;
+        }
+      }
+
+      let bestKey = 'C';
+      let bestScore = -Infinity;
+
+      for (const [keyName, baseMidi] of Object.entries(KEY_BASE_MIDI)) {
+        const root = baseMidi % 12;
+        let score = 0;
+        for (let i = 0; i < 12; i++) {
+          score += pitchClassCounts[(root + i) % 12] * MAJOR_PROFILE[i];
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          bestKey = keyName;
+        }
+      }
+      return bestKey;
+    }
+
+    // 加载内置经典示例
+    function loadDemoAudio(songKey) {
+      const demos = {
+        twinkle: {
+          title: '小星星 (Twinkle Twinkle Little Star)',
+          key: 'C',
+          timeSig: '4/4',
+          bpm: 108,
+          seq: [
+            [60,1],[60,1],[67,1],[67,1], [69,1],[69,1],[67,2],
+            [65,1],[65,1],[64,1],[64,1], [62,1],[62,1],[60,2],
+            [67,1],[67,1],[65,1],[65,1], [64,1],[64,1],[62,2],
+            [67,1],[67,1],[65,1],[65,1], [64,1],[64,1],[62,2],
+            [60,1],[60,1],[67,1],[67,1], [69,1],[69,1],[67,2],
+            [65,1],[65,1],[64,1],[64,1], [62,1],[62,1],[60,2]
+          ]
+        },
+        jasmine: {
+          title: '茉莉花 (江苏民歌)',
+          key: 'C',
+          timeSig: '4/4',
+          bpm: 96,
+          seq: [
+            [64,1],[64,0.5],[67,0.5],[69,0.5],[72,0.5],[72,0.5],[69,0.5],
+            [67,1],[67,0.5],[69,0.5],[67,2],
+            [64,1],[64,0.5],[67,0.5],[69,0.5],[72,0.5],[72,0.5],[69,0.5],
+            [67,1],[67,0.5],[69,0.5],[67,2],
+            [67,1],[67,1],[67,1],[64,0.5],[67,0.5],
+            [69,1],[69,1],[67,2],
+            [64,1],[62,0.5],[64,0.5],[67,1],[64,0.5],[62,0.5],
+            [60,1],[60,0.5],[62,0.5],[60,2]
+          ]
+        },
+        ode: {
+          title: '欢乐颂 (贝多芬第九交响曲)',
+          key: 'C',
+          timeSig: '4/4',
+          bpm: 116,
+          seq: [
+            [64,1],[64,1],[65,1],[67,1], [67,1],[65,1],[64,1],[62,1],
+            [60,1],[60,1],[62,1],[64,1], [64,1.5],[62,0.5],[62,2],
+            [64,1],[64,1],[65,1],[67,1], [67,1],[65,1],[64,1],[62,1],
+            [60,1],[60,1],[62,1],[64,1], [62,1.5],[60,0.5],[60,2]
+          ]
+        }
+      };
+
+      const demo = demos[songKey];
+      if (!demo) return;
+
+      document.getElementById('scoreTitleInput').value = demo.title;
+      document.getElementById('selectKey').value = demo.key;
+      document.getElementById('selectTimeSig').value = demo.timeSig;
+      document.getElementById('sliderBpm').value = demo.bpm;
+      STATE.key = demo.key;
+      STATE.timeSig = demo.timeSig;
+      STATE.bpm = demo.bpm;
+      onBpmInput(demo.bpm);
+
+      // 合成真实音频 Buffer
+      const ctx = getAudioContext();
+      const sampleRate = ctx.sampleRate;
+      const secPerBeat = 60 / demo.bpm;
+      const totalBeats = demo.seq.reduce((acc, item) => acc + item[1], 0);
+      const totalSamples = Math.ceil((totalBeats + 0.5) * secPerBeat * sampleRate);
+      const buffer = ctx.createBuffer(1, totalSamples, sampleRate);
+      const data = buffer.getChannelData(0);
+
+      let cursor = 0;
+      for (const [midi, beats] of demo.seq) {
+        const len = Math.floor(beats * secPerBeat * sampleRate);
+        const freq = 440 * Math.pow(2, (midi - 69) / 12);
+        const activeLen = Math.floor(len * 0.88);
+        for (let i = 0; i < activeLen; i++) {
+          const t = i / sampleRate;
+          const env = Math.min(1, i / 350) * Math.exp(-2.2 * t);
+          data[cursor + i] = env * (0.65 * Math.sin(2 * Math.PI * freq * t) + 0.25 * Math.sin(4 * Math.PI * freq * t));
+        }
+        cursor += len;
+      }
+
+      STATE.currentAudioBuffer = buffer;
+      document.getElementById('audioFileName').textContent = `${demo.title}.wav`;
+      document.getElementById('audioDurationLabel').textContent = `${buffer.duration.toFixed(1)}s`;
+      document.getElementById('waveformContainer').classList.remove('hidden');
+      drawWaveform(buffer);
+
+      STATE.notes = demo.seq.map(([midi, duration]) => ({ midi, duration, isRest: false }));
+      
+      // 生成可视化数据
+      STATE.pitchContourData = {
+        frames: demo.seq.map(([midi, dur], idx) => ({ midi, rawMidi: midi, time: idx * 0.5, isOnset: true })),
+        duration: buffer.duration,
+        notes: STATE.notes
+      };
+      drawPitchContourCanvas();
+
+      updateHeaderLabels();
+      renderJianpuScore();
+      syncRawTextFromNotes();
+      showToast(`已加载示例：《${demo.title}》`, 'success');
+    }
+
+    /**
+     * ============================================================================
+     * 6. 五线谱图片光学识谱 (Canvas OMR)
+     * ============================================================================
+     */
+    function handleImageFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const cleanName = file.name.replace(/\.[^/.]+$/, '');
+          document.getElementById('scoreTitleInput').value = cleanName;
+          processSheetImage(img);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    let lastLoadedSheetImg = null;
+    function reprocessSheetImage() {
+      if (lastLoadedSheetImg) processSheetImage(lastLoadedSheetImg);
+    }
+
+    /**
+     * 高精度五线谱光学识谱引擎 (借鉴开源 OMR 项目 Audiveris / Gamera)
+     * 核心特性：Otsu 动态大津二值化 + 游程统计抗噪 + 椭圆符头形态学识别 + 谱表加线探测
+     */
+    function processSheetImage(img) {
+      lastLoadedSheetImg = img;
+      const offCanvas = document.createElement('canvas');
+      const maxWidth = 1200;
+      const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+      offCanvas.width = Math.round(img.width * scale);
+      offCanvas.height = Math.round(img.height * scale);
+
+      const ctx = offCanvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, offCanvas.width, offCanvas.height);
+      ctx.drawImage(img, 0, 0, offCanvas.width, offCanvas.height);
+
+      const w = offCanvas.width;
+      const h = offCanvas.height;
+      const imgData = ctx.getImageData(0, 0, w, h).data;
+
+      // 1. Otsu 动态大津二值化 (自适应不同光照与背景的乐谱)
+      const hist = new Int32Array(256);
+      const gray = new Uint8Array(w * h);
+
+      for (let i = 0; i < w * h; i++) {
+        const idx = i * 4;
+        const lum = Math.round(0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2]);
+        gray[i] = lum;
+        hist[lum]++;
+      }
+
+      let total = w * h;
+      let sum = 0;
+      for (let t = 0; t < 256; t++) sum += t * hist[t];
+
+      let sumB = 0, wB = 0, wF = 0, varMax = 0, otsuThreshold = 145;
+      for (let t = 0; t < 256; t++) {
+        wB += hist[t];
+        if (wB === 0) continue;
+        wF = total - wB;
+        if (wF === 0) break;
+        sumB += t * hist[t];
+        const mB = sumB / wB;
+        const mF = (sum - sumB) / wF;
+        const betweenVar = wB * wF * (mB - mF) * (mB - mF);
+        if (betweenVar > varMax) {
+          varMax = betweenVar;
+          otsuThreshold = t;
+        }
+      }
+      otsuThreshold = Math.max(120, Math.min(185, otsuThreshold));
+
+      const binary = new Uint8Array(w * h);
+      const rowHist = new Int32Array(h);
+
+      for (let y = 0; y < h; y++) {
+        let darkCount = 0;
+        for (let x = 0; x < w; x++) {
+          const idx = y * w + x;
+          if (gray[idx] < otsuThreshold) {
+            binary[idx] = 1;
+            darkCount++;
+          }
+        }
+        rowHist[y] = darkCount;
+      }
+
+      // 2. 统计五线谱水平线峰值
+      const maxRowDark = Math.max(...rowHist);
+      const lineThreshold = Math.max(w * 0.25, maxRowDark * 0.42);
+      const candidateYs = [];
+
+      for (let y = 2; y < h - 2; y++) {
+        if (rowHist[y] > lineThreshold && rowHist[y] >= rowHist[y - 1] && rowHist[y] >= rowHist[y + 1]) {
+          if (candidateYs.length === 0 || y - candidateYs[candidateYs.length - 1] > 3) {
+            candidateYs.push(y);
+          }
+        }
+      }
+
+      // 3. 聚合五线谱组 (Staff Systems)
+      const staffSystems = [];
+      for (let i = 0; i + 4 < candidateYs.length; ) {
+        const group = candidateYs.slice(i, i + 5);
+        const spacings = [
+          group[1] - group[0],
+          group[2] - group[1],
+          group[3] - group[2],
+          group[4] - group[3]
+        ];
+        const avgD = spacings.reduce((a, b) => a + b, 0) / 4;
+        const isRegular = spacings.every(s => Math.abs(s - avgD) <= Math.max(3.5, avgD * 0.28));
+        if (isRegular && avgD >= 6) {
+          staffSystems.push({ lines: group, d: avgD });
+          i += 5;
+        } else {
+          i += 1;
+        }
+      }
+
+      if (staffSystems.length === 0) {
+        showToast('未能自动检测到标准五线谱横线，请上传平整清晰的乐谱图片', 'warning');
+        STATE.omrData = { img: offCanvas, systems: [], noteheads: [] };
+        document.getElementById('omrPreviewContainer').classList.remove('hidden');
+        renderOmrCanvas();
+        return;
+      }
+
+      // 4. 垂直去线：滤除细水平谱线，保留符干与椭圆符头
+      const noLines = new Uint8Array(w * h);
+      for (let x = 0; x < w; x++) {
+        for (let y = 1; y < h - 1; y++) {
+          if (binary[y * w + x] && binary[(y - 1) * w + x] && binary[(y + 1) * w + x]) {
+            noLines[y * w + x] = 1;
+          }
+        }
+      }
+
+      // 5. 扫描符头形态 (椭圆纵横比与面积过滤，剔除细长小节线)
+      const detectedNotes = [];
+      const detectedBoxes = [];
+      const clef = document.querySelector('input[name="clefType"]:checked').value;
+
+      const bottomLineDiatonicStep = clef === 'treble' ? 2 : 4; // 高音谱号底线 E4, 低音谱号底线 G2
+      const bottomLineOctave = clef === 'treble' ? 4 : 2;
+      const majorScaleSemitones = [0, 2, 4, 5, 7, 9, 11];
+
+      for (const sys of staffSystems) {
+        const d = sys.d;
+        // 扩展扫描上下各 3 个线距 (支持上加线与下加线音符，如下加一线 C4)
+        const topY = Math.max(0, Math.round(sys.lines[0] - d * 3.2));
+        const bottomY = Math.min(h - 1, Math.round(sys.lines[4] + d * 3.2));
+        const bottomLineY = sys.lines[4];
+
+        const visited = new Uint8Array(w * h);
+        const sysNotes = [];
+
+        // 跳过左侧谱号占位区域 (约 3.5 ~ 4 个线距)
+        for (let x = Math.round(d * 3.8); x < w - Math.round(d); x++) {
+          for (let y = topY; y <= bottomY; y++) {
+            const idx = y * w + x;
+            if (noLines[idx] && !visited[idx]) {
+              let minX = x, maxX = x, minY = y, maxY = y, area = 0;
+              const queue = [[x, y]];
+              visited[idx] = 1;
+
+              while (queue.length > 0) {
+                const [cx, cy] = queue.shift();
+                area++;
+                if (cx < minX) minX = cx;
+                if (cx > maxX) maxX = cx;
+                if (cy < minY) minY = cy;
+                if (cy > maxY) maxY = cy;
+
+                for (let dx = -1; dx <= 1; dx++) {
+                  for (let dy = -1; dy <= 1; dy++) {
+                    const nx = cx + dx, ny = cy + dy;
+                    if (nx >= 0 && nx < w && ny >= topY && ny <= bottomY) {
+                      const nIdx = ny * w + nx;
+                      if (noLines[nIdx] && !visited[nIdx]) {
+                        visited[nIdx] = 1;
+                        queue.push([nx, ny]);
+                      }
+                    }
+                  }
+                }
+              }
+
+              const bw = maxX - minX + 1;
+              const bh = maxY - minY + 1;
+
+              // 过滤掉纯竖线小节线 (小节线宽度极细 <= 3px 且高度较大)
+              if (bw <= 3 && bh >= d * 2.8) continue;
+
+              // 符头特征匹配 (宽度约 0.65d ~ 2.0d，面积合理)
+              if (bw >= d * 0.65 && bw <= d * 2.2 && bh >= d * 0.65 && bh <= d * 4.6 && area >= d * d * 0.25) {
+                // 搜索符头椭圆的最高密度中心 Y
+                let bestHeadY = (minY + maxY) / 2;
+                let maxLocalPixels = -1;
+                const headHalfH = Math.max(2, Math.round(d * 0.45));
+                for (let scanY = minY + headHalfH; scanY <= maxY - headHalfH; scanY++) {
+                  let count = 0;
+                  for (let sy = scanY - headHalfH; sy <= scanY + headHalfH; sy++) {
+                    for (let sx = minX; sx <= maxX; sx++) {
+                      if (noLines[sy * w + sx]) count++;
+                    }
+                  }
+                  if (count > maxLocalPixels) {
+                    maxLocalPixels = count;
+                    bestHeadY = scanY;
+                  }
+                }
+
+                // 避免同一符头重复注册
+                if (sysNotes.length > 0 && Math.abs(minX - sysNotes[sysNotes.length - 1].x) < d * 0.75) {
+                  continue;
+                }
+
+                const centerX = Math.round((minX + maxX) / 2);
+                const centerY = Math.round(bestHeadY);
+                const isHollow = binary[centerY * w + centerX] === 0;
+
+                // 计算相对五线谱底线的半间距步数
+                const stepsFromBottom = Math.round((bottomLineY - bestHeadY) / (d / 2));
+                const totalDiatonic = bottomLineDiatonicStep + stepsFromBottom;
+                const octaveOffset = Math.floor(totalDiatonic / 7);
+                const degreeIdx = ((totalDiatonic % 7) + 7) % 7;
+                const midi = (bottomLineOctave + octaveOffset + 1) * 12 + majorScaleSemitones[degreeIdx];
+
+                sysNotes.push({
+                  x: centerX,
+                  y: centerY,
+                  midi,
+                  duration: isHollow ? 2 : 1,
+                  isRest: false
+                });
+
+                detectedBoxes.push({
+                  x: minX - 2,
+                  y: centerY - Math.round(d * 0.55),
+                  w: bw + 4,
+                  h: Math.round(d * 1.1)
+                });
+              }
+            }
+          }
+        }
+
+        sysNotes.sort((a, b) => a.x - b.x);
+        detectedNotes.push(...sysNotes);
+      }
+
+      STATE.omrData = {
+        img: offCanvas,
+        systems: staffSystems,
+        noteheads: detectedBoxes
+      };
+
+      document.getElementById('omrPreviewContainer').classList.remove('hidden');
+      renderOmrCanvas();
+
+      if (detectedNotes.length === 0) {
+        showToast('已定位五线谱，但未能识别出音符，请尝试更清晰的乐谱图片', 'warning');
+        return;
+      }
+
+      document.getElementById('omrStatsBadge').innerHTML =
+        `<span>✅ 识别完成：检测到 ${staffSystems.length} 组五线谱，共提取 ${detectedNotes.length} 个音符</span>`;
+
+      STATE.notes = detectedNotes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
+      updateHeaderLabels();
+      renderJianpuScore();
+      syncRawTextFromNotes();
+      showToast(`五线谱识别成功！已生成 ${STATE.notes.length} 个简谱音符`, 'success');
+    }
+
+    function renderOmrCanvas() {
+      if (!STATE.omrData) return;
+      const canvas = document.getElementById('omrCanvas');
+      const src = STATE.omrData.img;
+      canvas.width = src.width;
+      canvas.height = src.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(src, 0, 0);
+
+      if (!document.getElementById('toggleOmrOverlay').checked) return;
+
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.8)';
+      ctx.lineWidth = 1.5;
+      for (const sys of STATE.omrData.systems) {
+        for (const ly of sys.lines) {
+          ctx.beginPath();
+          ctx.moveTo(10, ly);
+          ctx.lineTo(canvas.width - 10, ly);
+          ctx.stroke();
+        }
+      }
+
+      ctx.strokeStyle = '#ef4444';
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+      ctx.lineWidth = 2;
+      for (const box of STATE.omrData.noteheads) {
+        ctx.fillRect(box.x, box.y, box.w, box.h);
+        ctx.strokeRect(box.x, box.y, box.w, box.h);
+      }
+    }
+
+    function loadDemoSheetImage(type) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 760;
+      canvas.height = 200;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const d = 14;
+      const topY = 65;
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 5; i++) {
+        const y = topY + i * d;
+        ctx.beginPath();
+        ctx.moveTo(40, y);
+        ctx.lineTo(720, y);
+        ctx.stroke();
+      }
+      const bottomLineY = topY + 4 * d;
+
+      const patterns = {
+        scale: {
+          title: 'C大调音阶五线谱',
+          notes: [
+            { step: -2, hollow: false },
+            { step: -1, hollow: false },
+            { step: 0,  hollow: false },
+            { step: 1,  hollow: false },
+            { step: 2,  hollow: false },
+            { step: 3,  hollow: false },
+            { step: 4,  hollow: false },
+            { step: 5,  hollow: true  }
+          ]
+        },
+        canon: {
+          title: '卡农经典旋律五线谱',
+          notes: [
+            { step: 5, hollow: true },
+            { step: 4, hollow: true },
+            { step: 3, hollow: true },
+            { step: 2, hollow: true },
+            { step: 1, hollow: true },
+            { step: 0, hollow: true },
+            { step: 1, hollow: true },
+            { step: 2, hollow: true }
+          ]
+        }
+      };
+
+      const item = patterns[type];
+      document.getElementById('scoreTitleInput').value = item.title;
+      document.querySelector('input[name="clefType"][value="treble"]').checked = true;
+
+      ctx.font = 'bold 56px serif';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText('𝄞', 48, bottomLineY + 6);
+
+      item.notes.forEach((n, idx) => {
+        const x = 135 + idx * 72;
+        const y = bottomLineY - n.step * (d / 2);
+
+        if (n.step <= -2) {
+          ctx.beginPath();
+          ctx.moveTo(x - 14, bottomLineY + d);
+          ctx.lineTo(x + 14, bottomLineY + d);
+          ctx.stroke();
+        }
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(-0.35);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, d * 0.62, d * 0.45, 0, 0, Math.PI * 2);
+        if (n.hollow) {
+          ctx.lineWidth = 2.4;
+          ctx.strokeStyle = '#0f172a';
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#0f172a';
+          ctx.fill();
+        }
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.lineWidth = 1.8;
+        if (n.step < 4) {
+          ctx.moveTo(x + d * 0.55, y);
+          ctx.lineTo(x + d * 0.55, y - d * 3.2);
+        } else {
+          ctx.moveTo(x - d * 0.55, y);
+          ctx.lineTo(x - d * 0.55, y + d * 3.2);
+        }
+        ctx.stroke();
+      });
+
+      const img = new Image();
+      img.onload = () => processSheetImage(img);
+      img.src = canvas.toDataURL('image/png');
+    }
+
+    /**
+     * ============================================================================
+     * 7. 标准简谱排版与高保真 SVG 矢量渲染引擎
+     * ============================================================================
+     */
+    function midiToJianpuInfo(midi, isRest) {
+      if (isRest || midi <= 0) {
+        return { text: '0', accidental: '', octave: 0 };
+      }
+      const baseMidi = KEY_BASE_MIDI[STATE.key] || 60;
+      const diff = midi - baseMidi;
+      const octave = Math.floor(diff / 12);
+      const semitone = ((diff % 12) + 12) % 12;
+      const mapped = SEMITONE_TO_JIANPU[semitone];
+      return {
+        text: String(mapped.degree),
+        accidental: mapped.accidental,
+        octave
+      };
+    }
+
+    function buildRenderTokens() {
+      const beatsPerMeasure = parseInt(STATE.timeSig.split('/')[0], 10) || 4;
+      const beatUnit = parseInt(STATE.timeSig.split('/')[1], 10) || 4;
+      const measureCapacity = beatsPerMeasure * (4 / beatUnit);
+
+      const tokens = [];
+      let currentMeasureBeats = 0;
+
+      STATE.notes.forEach((note, noteIdx) => {
+        const info = midiToJianpuInfo(note.midi, note.isRest);
+        let rem = note.duration;
+
+        // 附点或增时线
+        if (rem >= 1.5 && !note.isRest) {
+          if (Math.abs(rem - 1.5) < 0.05) {
+            tokens.push({
+              type: 'note',
+              noteIdx,
+              text: info.text,
+              accidental: info.accidental,
+              octave: info.octave,
+              underlines: 0,
+              dotted: true,
+              beats: 1.5
+            });
+            currentMeasureBeats += 1.5;
+          } else {
+            const wholeBeats = Math.round(rem);
+            tokens.push({
+              type: 'note',
+              noteIdx,
+              text: info.text,
+              accidental: info.accidental,
+              octave: info.octave,
+              underlines: 0,
+              dotted: false,
+              beats: 1
+            });
+            currentMeasureBeats += 1;
+
+            for (let k = 1; k < wholeBeats; k++) {
+              if (currentMeasureBeats >= measureCapacity - 0.01) {
+                tokens.push({ type: 'bar' });
+                currentMeasureBeats = 0;
+              }
+              tokens.push({
+                type: 'dash',
+                noteIdx,
+                text: '-',
+                accidental: '',
+                octave: 0,
+                underlines: 0,
+                dotted: false,
+                beats: 1
+              });
+              currentMeasureBeats += 1;
+            }
+          }
+        } else {
+          let underlines = 0;
+          let dotted = false;
+          if (Math.abs(rem - 0.75) < 0.05) {
+            underlines = 1;
+            dotted = true;
+          } else if (rem <= 0.3) {
+            underlines = 2;
+          } else if (rem <= 0.6) {
+            underlines = 1;
+          }
+
+          tokens.push({
+            type: 'note',
+            noteIdx,
+            text: info.text,
+            accidental: info.accidental,
+            octave: info.octave,
+            underlines,
+            dotted,
+            beats: rem
+          });
+          currentMeasureBeats += rem;
+        }
+
+        if (currentMeasureBeats >= measureCapacity - 0.05) {
+          tokens.push({ type: 'bar' });
+          currentMeasureBeats = 0;
+        }
+      });
+
+      if (tokens.length > 0 && tokens[tokens.length - 1].type === 'bar') {
+        tokens[tokens.length - 1].type = 'endbar';
+      } else if (tokens.length > 0) {
+        tokens.push({ type: 'endbar' });
+      }
+
+      return tokens;
+    }
+
+    function renderJianpuScore() {
+      const container = document.getElementById('jianpuSvgContainer');
+      const tokens = buildRenderTokens();
+
+      if (tokens.length === 0) {
+        container.innerHTML = `<div class="text-slate-400 text-xs sm:text-sm py-16 text-center">暂无乐谱音符数据，请在左侧上传音频/图片或选择演示示例</div>`;
+        return;
+      }
+
+      const lines = [];
+      let currentLine = [];
+      let barsInLine = 0;
+
+      for (const tok of tokens) {
+        currentLine.push(tok);
+        if (tok.type === 'bar' || tok.type === 'endbar') {
+          barsInLine++;
+          if (barsInLine >= 4) {
+            lines.push(currentLine);
+            currentLine = [];
+            barsInLine = 0;
+          }
+        }
+      }
+      if (currentLine.length > 0) lines.push(currentLine);
+
+      const svgWidth = 680;
+      const lineHeight = 80;
+      const topPadding = 28;
+      const svgHeight = Math.max(220, lines.length * lineHeight + topPadding + 20);
+
+      let svgContent = `<svg id="jianpuScoreSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" class="w-full max-w-[680px] h-auto select-none transition-all">`;
+      svgContent += `<rect width="${svgWidth}" height="${svgHeight}" fill="transparent" />`;
+
+      lines.forEach((lineTokens, lineIdx) => {
+        const baseY = topPadding + lineIdx * lineHeight + 26;
+        const marginX = 28;
+        const usableW = svgWidth - marginX * 2;
+        const stepX = usableW / Math.max(lineTokens.length, 12);
+
+        lineTokens.forEach((tok, idx) => {
+          const x = marginX + idx * stepX + stepX * 0.5;
+
+          if (tok.type === 'bar') {
+            svgContent += `<line x1="${x}" y1="${baseY - 18}" x2="${x}" y2="${baseY + 10}" stroke="#475569" stroke-width="1.6" />`;
+          } else if (tok.type === 'endbar') {
+            svgContent += `<line x1="${x - 3.5}" y1="${baseY - 18}" x2="${x - 3.5}" y2="${baseY + 10}" stroke="#0f172a" stroke-width="1.6" />`;
+            svgContent += `<line x1="${x + 2.5}" y1="${baseY - 18}" x2="${x + 2.5}" y2="${baseY + 10}" stroke="#0f172a" stroke-width="3.4" />`;
+          } else {
+            const isSelected = tok.noteIdx === STATE.selectedNoteIdx;
+            const groupClass = `note-token-${tok.noteIdx} ${isSelected ? 'note-token-selected' : ''}`;
+
+            svgContent += `<g class="cursor-pointer ${groupClass}" onclick="selectNoteForEdit(${tok.noteIdx})">`;
+            svgContent += `<rect x="${x - 14}" y="${baseY - 26}" width="28" height="46" rx="8" fill="${isSelected ? '#ede9fe' : 'transparent'}" class="note-bg-${tok.noteIdx} transition-colors" />`;
+
+            // 1. 升降号
+            if (tok.accidental) {
+              const accSymbol = tok.accidental === '#' ? '♯' : '♭';
+              svgContent += `<text x="${x - 12}" y="${baseY - 7}" font-size="11" font-weight="700" fill="#4f46e5" text-anchor="middle">${accSymbol}</text>`;
+            }
+
+            // 2. 主音符数字或增时线
+            svgContent += `<text x="${x}" y="${baseY + 5}" font-family="'JetBrains Mono', monospace" font-size="22" font-weight="700" fill="${isSelected ? '#4338ca' : '#0f172a'}" text-anchor="middle" class="note-text-${tok.noteIdx}">${tok.text}</text>`;
+
+            // 3. 附点
+            if (tok.dotted) {
+              svgContent += `<circle cx="${x + 11}" cy="${baseY}" r="2.2" fill="#0f172a" />`;
+            }
+
+            // 4. 高音点
+            if (tok.octave > 0) {
+              for (let o = 0; o < Math.min(tok.octave, 2); o++) {
+                svgContent += `<circle cx="${x}" cy="${baseY - 18 - o * 6}" r="2.2" fill="#0f172a" />`;
+              }
+            }
+
+            // 5. 减时线
+            let bottomOffset = baseY + 10;
+            for (let u = 0; u < tok.underlines; u++) {
+              svgContent += `<line x1="${x - 9}" y1="${bottomOffset}" x2="${x + 9}" y2="${bottomOffset}" stroke="#0f172a" stroke-width="1.8" />`;
+              bottomOffset += 4.5;
+            }
+
+            // 6. 低音点
+            if (tok.octave < 0) {
+              const absOct = Math.min(Math.abs(tok.octave), 2);
+              for (let o = 0; o < absOct; o++) {
+                svgContent += `<circle cx="${x}" cy="${bottomOffset + 3 + o * 6}" r="2.2" fill="#0f172a" />`;
+              }
+            }
+
+            svgContent += `</g>`;
+          }
+        });
+      });
+
+      svgContent += `</svg>`;
+      container.innerHTML = svgContent;
+    }
+
+    /**
+     * ============================================================================
+     * 8. 单音交互微调与双向代码同步
+     * ============================================================================
+     */
+    function selectNoteForEdit(idx) {
+      STATE.selectedNoteIdx = idx;
+      const bar = document.getElementById('noteEditorBar');
+      bar.classList.remove('hidden');
+      document.getElementById('editNoteIndex').textContent = idx + 1;
+      renderJianpuScore();
+    }
+
+    function adjustSelectedNote(prop, delta) {
+      const idx = STATE.selectedNoteIdx;
+      if (idx < 0 || idx >= STATE.notes.length) return;
+      const note = STATE.notes[idx];
+
+      if (prop === 'pitch') {
+        if (note.isRest) {
+          note.isRest = false;
+          note.midi = KEY_BASE_MIDI[STATE.key] || 60;
+        } else {
+          note.midi = Math.max(36, Math.min(96, note.midi + delta));
+        }
+      } else if (prop === 'octave') {
+        if (!note.isRest) {
+          note.midi = Math.max(36, Math.min(96, note.midi + delta * 12));
+        }
+      } else if (prop === 'duration') {
+        note.duration = Math.max(0.25, Math.min(4, note.duration + delta));
+      }
+
+      renderJianpuScore();
+      syncRawTextFromNotes();
+    }
+
+    function deleteSelectedNote() {
+      const idx = STATE.selectedNoteIdx;
+      if (idx < 0 || idx >= STATE.notes.length) return;
+      STATE.notes.splice(idx, 1);
+      STATE.selectedNoteIdx = -1;
+      document.getElementById('noteEditorBar').classList.add('hidden');
+      renderJianpuScore();
+      syncRawTextFromNotes();
+    }
+
+    function generateJianpuTextString() {
+      const beatsPerMeasure = parseInt(STATE.timeSig.split('/')[0], 10) || 4;
+      const beatUnit = parseInt(STATE.timeSig.split('/')[1], 10) || 4;
+      const measureCapacity = beatsPerMeasure * (4 / beatUnit);
+
+      let parts = [];
+      let accBeats = 0;
+
+      for (const n of STATE.notes) {
+        const info = midiToJianpuInfo(n.midi, n.isRest);
+        let str = info.accidental + info.text;
+        if (info.octave > 0) str += "'".repeat(info.octave);
+        if (info.octave < 0) str += ",".repeat(Math.abs(info.octave));
+
+        if (n.duration >= 2) {
+          str += '-'.repeat(Math.round(n.duration) - 1);
+        } else if (Math.abs(n.duration - 1.5) < 0.05) {
+          str += '.';
+        } else if (n.duration <= 0.3) {
+          str += '=';
+        } else if (n.duration <= 0.6) {
+          str += '_';
+        }
+
+        parts.push(str);
+        accBeats += n.duration;
+        if (accBeats >= measureCapacity - 0.05) {
+          parts.push('|');
+          accBeats = 0;
+        }
+      }
+      return parts.join(' ');
+    }
+
+    function syncRawTextFromNotes() {
+      document.getElementById('rawJianpuInput').value = generateJianpuTextString();
+    }
+
+    function parseRawJianpuText(raw) {
+      const tokens = raw.replace(/\|/g, ' ').trim().split(/\s+/).filter(Boolean);
+      const baseMidi = KEY_BASE_MIDI[STATE.key] || 60;
+      const degreeToSemitone = { '1': 0, '2': 2, '3': 4, '4': 5, '5': 7, '6': 9, '7': 11 };
+      const parsed = [];
+
+      for (const tok of tokens) {
+        const m = tok.match(/^([#b]?)([0-7])(['*,]*)(-*)(=|_|\.?)$/);
+        if (!m) continue;
+        const [, acc, deg, octStr, dashes, suffix] = m;
+
+        let dur = 1;
+        if (dashes.length > 0) dur = 1 + dashes.length;
+        else if (suffix === '=') dur = 0.25;
+        else if (suffix === '_') dur = 0.5;
+        else if (suffix === '.') dur = 1.5;
+
+        if (deg === '0') {
+          parsed.push({ midi: 0, duration: dur, isRest: true });
+        } else {
+          let semi = degreeToSemitone[deg] || 0;
+          if (acc === '#') semi += 1;
+          if (acc === 'b') semi -= 1;
+          const upOct = (octStr.match(/'/g) || []).length;
+          const downOct = (octStr.match(/,/g) || []).length;
+          const midi = baseMidi + semi + (upOct - downOct) * 12;
+          parsed.push({ midi, duration: dur, isRest: false });
+        }
+      }
+
+      if (parsed.length > 0) {
+        STATE.notes = parsed;
+        renderJianpuScore();
+        showToast('已根据文本代码更新简谱', 'success');
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 9. 现代电钢与泛音合成器试听
+     * ============================================================================
+     */
+    function togglePlayback() {
+      if (STATE.isPlaying) {
+        stopPlayback();
+        return;
+      }
+      if (STATE.notes.length === 0) {
+        showToast('当前没有可播放的音符', 'warning');
+        return;
+      }
+
+      // 先确保停止之前的所有发声
+      stopPlayback();
+
+      STATE.isPlaying = true;
+      document.getElementById('playBtnText').textContent = '停止播放';
+      const btn = document.getElementById('btnPlayToggle');
+      btn.classList.replace('play-glow-btn', 'bg-rose-600');
+
+      const ctx = getAudioContext();
+      
+      // 创建总控主增益节点 (连接到扬声器，停止时切断它即可瞬间彻底静音)
+      STATE.playbackMasterGain = ctx.createGain();
+      STATE.playbackMasterGain.gain.setValueAtTime(1.0, ctx.currentTime);
+      STATE.playbackMasterGain.connect(ctx.destination);
+      STATE.activeOscillators = [];
+
+      const secPerBeat = 60 / STATE.bpm;
+      let currentTime = ctx.currentTime + 0.05;
+
+      STATE.notes.forEach((note, idx) => {
+        const durSec = note.duration * secPerBeat;
+        const delayMs = Math.max(0, (currentTime - ctx.currentTime) * 1000);
+
+        const timerOn = setTimeout(() => {
+          document.querySelectorAll(`[class*="note-bg-"]`).forEach(el => el.setAttribute('fill', 'transparent'));
+          const activeBg = document.querySelectorAll(`.note-bg-${idx}`);
+          activeBg.forEach(el => {
+            el.setAttribute('fill', '#fde68a');
+          });
+        }, delayMs);
+        STATE.playbackTimers.push(timerOn);
+
+        if (!note.isRest && note.midi > 0) {
+          const freq = 440 * Math.pow(2, (note.midi - 69) / 12);
+          playSynthTone(ctx, freq, currentTime, durSec * 0.92);
+        }
+
+        currentTime += durSec;
+      });
+
+      const endDelayMs = Math.max(0, (currentTime - ctx.currentTime) * 1000);
+      const timerEnd = setTimeout(() => stopPlayback(), endDelayMs + 100);
+      STATE.playbackTimers.push(timerEnd);
+    }
+
+    function playSynthTone(ctx, freq, startTime, duration) {
+      if (!STATE.playbackMasterGain) return;
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const osc3 = ctx.createOscillator();
+      const noteGain = ctx.createGain();
+
+      osc1.type = 'triangle';
+      osc2.type = 'sine';
+      osc3.type = 'sine';
+      osc1.frequency.setValueAtTime(freq, startTime);
+      osc2.frequency.setValueAtTime(freq * 2, startTime);
+      osc3.frequency.setValueAtTime(freq * 3, startTime);
+
+      const subGain2 = ctx.createGain();
+      subGain2.gain.value = 0.28;
+      const subGain3 = ctx.createGain();
+      subGain3.gain.value = 0.12;
+
+      noteGain.gain.setValueAtTime(0.001, startTime);
+      noteGain.gain.exponentialRampToValueAtTime(0.35, startTime + 0.02);
+      noteGain.gain.exponentialRampToValueAtTime(0.001, startTime + Math.max(0.08, duration));
+
+      osc1.connect(noteGain);
+      osc2.connect(subGain2);
+      subGain2.connect(noteGain);
+      osc3.connect(subGain3);
+      subGain3.connect(noteGain);
+      
+      // 所有单音连接到总控主增益节点，而非直接接扬声器
+      noteGain.connect(STATE.playbackMasterGain);
+
+      osc1.start(startTime);
+      osc2.start(startTime);
+      osc3.start(startTime);
+      osc1.stop(startTime + duration + 0.04);
+      osc2.stop(startTime + duration + 0.04);
+      osc3.stop(startTime + duration + 0.04);
+
+      // 跟踪振荡器节点以便立即调用 stop()
+      STATE.activeOscillators.push(osc1, osc2, osc3);
+    }
+
+    function stopPlayback() {
+      STATE.isPlaying = false;
+
+      // 1. 立即清除所有 UI 高亮定时器
+      STATE.playbackTimers.forEach(t => clearTimeout(t));
+      STATE.playbackTimers = [];
+
+      // 2. 0毫秒切断总控音频输出流并断开连接 (保证绝对静音)
+      if (STATE.playbackMasterGain && STATE.audioCtx) {
+        try {
+          STATE.playbackMasterGain.gain.setValueAtTime(0, STATE.audioCtx.currentTime);
+          STATE.playbackMasterGain.disconnect();
+        } catch (e) {}
+        STATE.playbackMasterGain = null;
+      }
+
+      // 3. 立即停止所有已调度或正在振荡的硬件声源
+      if (STATE.activeOscillators && STATE.activeOscillators.length > 0) {
+        STATE.activeOscillators.forEach(osc => {
+          try {
+            osc.stop();
+            osc.disconnect();
+          } catch (e) {}
+        });
+        STATE.activeOscillators = [];
+      }
+
+      // 4. 重置高亮与按钮视觉状态
+      document.querySelectorAll(`[class*="note-bg-"]`).forEach(el => el.setAttribute('fill', 'transparent'));
+
+      const btn = document.getElementById('btnPlayToggle');
+      if (btn) {
+        document.getElementById('playBtnText').textContent = '试听简谱';
+        btn.classList.replace('bg-rose-600', 'play-glow-btn');
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 10. 高保真导出 (PNG 高清图 / 标准 MIDI / 纯文本代码)
+     * ============================================================================
+     */
+    function exportJianpuPng() {
+      const svgEl = document.getElementById('jianpuScoreSvg');
+      if (!svgEl) {
+        showToast('没有可导出的简谱', 'warning');
+        return;
+      }
+      const title = document.getElementById('scoreTitleInput').value || '简谱乐谱';
+      const keyStr = document.getElementById('headerKeyDisplay').textContent;
+      const timeStr = document.getElementById('headerTimeDisplay').textContent;
+      const bpmStr = `♩ = ${STATE.bpm}`;
+
+      const svgClone = svgEl.cloneNode(true);
+      const vb = svgEl.viewBox.baseVal;
+      const headerHeight = 100;
+      const totalW = vb.width;
+      const totalH = vb.height + headerHeight;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = totalW * 2;
+      canvas.height = totalH * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(2, 2);
+
+      // 背景与标题
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, totalW, totalH);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 24px "Noto Serif SC", serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, totalW / 2, 44);
+
+      ctx.font = 'bold 13px "JetBrains Mono", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${keyStr}   ${timeStr}`, 32, 78);
+      ctx.textAlign = 'right';
+      ctx.fillText(bpmStr, totalW - 32, 78);
+
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, headerHeight, vb.width, vb.height);
+        const link = document.createElement('a');
+        link.download = `${title}_简谱.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('已导出高清出版级简谱图片！', 'success');
+      };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+    }
+
+    function exportMidiFile() {
+      if (STATE.notes.length === 0) return;
+      const tpq = 480;
+      const tempoMicrosec = Math.round(60000000 / STATE.bpm);
+
+      const trackEvents = [];
+      trackEvents.push(0x00, 0xFF, 0x51, 0x03, (tempoMicrosec >> 16) & 0xFF, (tempoMicrosec >> 8) & 0xFF, tempoMicrosec & 0xFF);
+
+      function writeVarLen(val) {
+        let buffer = val & 0x7F;
+        const bytes = [];
+        while ((val >>= 7) > 0) {
+          buffer <<= 8;
+          buffer |= ((val & 0x7F) | 0x80);
+        }
+        while (true) {
+          bytes.push(buffer & 0xFF);
+          if (buffer & 0x80) buffer >>= 8;
+          else break;
+        }
+        return bytes;
+      }
+
+      let pendingRestTicks = 0;
+      for (const n of STATE.notes) {
+        const ticks = Math.round(n.duration * tpq);
+        if (n.isRest || n.midi <= 0) {
+          pendingRestTicks += ticks;
+        } else {
+          trackEvents.push(...writeVarLen(pendingRestTicks), 0x90, n.midi & 0x7F, 0x64);
+          trackEvents.push(...writeVarLen(ticks), 0x80, n.midi & 0x7F, 0x00);
+          pendingRestTicks = 0;
+        }
+      }
+      trackEvents.push(0x00, 0xFF, 0x2F, 0x00);
+
+      const header = [
+        0x4D, 0x54, 0x68, 0x64,
+        0x00, 0x00, 0x00, 0x06,
+        0x00, 0x00,
+        0x00, 0x01,
+        (tpq >> 8) & 0xFF, tpq & 0xFF
+      ];
+
+      const tLen = trackEvents.length;
+      const trackHeader = [
+        0x4D, 0x54, 0x72, 0x6B,
+        (tLen >> 24) & 0xFF, (tLen >> 16) & 0xFF, (tLen >> 8) & 0xFF, tLen & 0xFF
+      ];
+
+      const midiBytes = new Uint8Array([...header, ...trackHeader, ...trackEvents]);
+      const blob = new Blob([midiBytes], { type: 'audio/midi' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${document.getElementById('scoreTitleInput').value || 'jianpu'}.mid`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('标准 MIDI 乐谱文件已导出！', 'success');
+    }
+
+    function copyJianpuText() {
+      const title = document.getElementById('scoreTitleInput').value || '未命名简谱';
+      const header = `《${title}》 | 1=${STATE.key} | ${STATE.timeSig} | ♩=${STATE.bpm}`;
+      const body = generateJianpuTextString();
+      const fullText = `${header}\n${body}`;
+
+      const textarea = document.createElement('textarea');
+      textarea.value = fullText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showToast('简谱文本代码已成功复制到剪贴板！', 'success');
+    }
+
+    /**
+     * ============================================================================
+     * 11. 超清大图查看器 (Lightbox Modal) 交互逻辑
+     * ============================================================================
+     */
+    function openPreviewModal(type) {
+      STATE.currentPreviewType = type;
+      STATE.previewZoom = 1.0;
+      const modal = document.getElementById('previewModal');
+      const titleEl = document.getElementById('previewModalTitle');
+      const badgeEl = document.getElementById('previewModalBadge');
+      const modalCanvas = document.getElementById('modalCanvas');
+      modalCanvas.style.transform = 'scale(1)';
+
+      let sourceCanvas = null;
+      if (type === 'waveform') {
+        sourceCanvas = document.getElementById('waveformCanvas');
+        titleEl.textContent = '全景高精度音频波形与能量包络大图';
+        badgeEl.textContent = 'AUDIO WAVEFORM';
+      } else if (type === 'pitch') {
+        sourceCanvas = document.getElementById('pitchCanvas');
+        titleEl.textContent = '全曲音高提取连续轨迹与简谱音符分段 (Piano Roll)';
+        badgeEl.textContent = 'PITCH WATERFALL';
+      } else if (type === 'omr') {
+        sourceCanvas = document.getElementById('omrCanvas');
+        titleEl.textContent = '五线谱光学识谱 (OMR) 谱线与符头定位大图';
+        badgeEl.textContent = 'SHEET OMR OVERLAY';
+      }
+
+      if (!sourceCanvas) return;
+
+      modalCanvas.width = sourceCanvas.width;
+      modalCanvas.height = sourceCanvas.height;
+      const mctx = modalCanvas.getContext('2d');
+      mctx.drawImage(sourceCanvas, 0, 0);
+
+      document.getElementById('previewModalMeta').textContent = `${sourceCanvas.width} × ${sourceCanvas.height} px · 缩放率: 100%`;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closePreviewModal() {
+      const modal = document.getElementById('previewModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      STATE.currentPreviewType = null;
+    }
+
+    function zoomPreview(delta) {
+      STATE.previewZoom = Math.max(0.4, Math.min(3.5, STATE.previewZoom + delta));
+      const modalCanvas = document.getElementById('modalCanvas');
+      modalCanvas.style.transform = `scale(${STATE.previewZoom})`;
+      document.getElementById('previewModalMeta').textContent = `缩放率: ${Math.round(STATE.previewZoom * 100)}%`;
+    }
+
+    function resetPreviewZoom() {
+      STATE.previewZoom = 1.0;
+      const modalCanvas = document.getElementById('modalCanvas');
+      modalCanvas.style.transform = 'scale(1)';
+      document.getElementById('previewModalMeta').textContent = '缩放率: 100%';
+    }
+
+    function downloadPreviewImage() {
+      const modalCanvas = document.getElementById('modalCanvas');
+      const link = document.createElement('a');
+      link.download = `${STATE.currentPreviewType || 'analysis'}_超清分析图.png`;
+      link.href = modalCanvas.toDataURL('image/png');
+      link.click();
+      showToast('超清分析大图已下载！', 'success');
+    }
+
+    // 监听键盘 ESC 键关闭大图查看器
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closePreviewModal();
+        closeHelpModal();
+      }
+    });
+
+    // 页面初始化完成加载
+    window.onload = function () {
+      setupFileListeners();
+      loadDemoAudio('twinkle');
+    };
+  </script>
+</body>
+</html>
