@@ -453,14 +453,18 @@
             <div class="bg-white/90 border border-slate-200/70 rounded-2xl p-3 shadow-2xs space-y-2.5">
               <div class="flex items-center justify-between text-xs">
                 <span class="font-semibold text-slate-700">谱号模式：</span>
-                <div class="flex space-x-3">
+                <div class="flex space-x-2.5">
                   <label class="inline-flex items-center text-xs text-slate-700 cursor-pointer">
                     <input type="radio" name="clefType" value="treble" checked onchange="reprocessSheetImage()" class="text-indigo-600 focus:ring-indigo-500 mr-1">
-                    <span>高音 (𝄞 G)</span>
+                    <span>高音 (𝄞)</span>
                   </label>
                   <label class="inline-flex items-center text-xs text-slate-700 cursor-pointer">
                     <input type="radio" name="clefType" value="bass" onchange="reprocessSheetImage()" class="text-indigo-600 focus:ring-indigo-500 mr-1">
-                    <span>低音 (𝄢 F)</span>
+                    <span>低音 (𝄢)</span>
+                  </label>
+                  <label class="inline-flex items-center text-xs text-slate-700 cursor-pointer" title="左右手钢琴大谱表 (上下行高低音联动识别)">
+                    <input type="radio" name="clefType" value="grand" onchange="reprocessSheetImage()" class="text-indigo-600 focus:ring-indigo-500 mr-1">
+                    <span>钢琴大谱表</span>
                   </label>
                 </div>
               </div>
@@ -555,7 +559,7 @@
 <!-- ======================================================== -->
       <!-- 中间：核心简谱乐谱工作台 (出版级纸张 + 底部固定悬浮控制台) -->
       <!-- ======================================================== -->
-      <div class="col-span-12 lg:col-span-8 xl:col-span-6 flex flex-col space-y-4 relative min-w-0">
+      <div class="col-span-12 lg:col-span-8 xl:col-span-6 flex flex-col gap-4 relative min-w-0">
 
         <!-- 中间工作台模式切换栏 (仅在左侧处于五线谱识谱时显示，不加图标) -->
         <div id="centerViewSwitcher" class="hidden items-center justify-between bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-xs">
@@ -589,14 +593,16 @@
             </label>
           </div>
 
-          <!-- 交互修谱指南与识别状态提示 (置于中间栏最上方) -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div class="text-xs text-slate-600 bg-slate-50/90 border border-slate-200/80 rounded-xl px-3.5 py-2.5 leading-relaxed flex-1">
+          <!-- 交互修谱指南与识别状态提示 (各放一行，上下全宽展示) -->
+          <div class="flex flex-col space-y-2.5 w-full">
+            <!-- 第 1 行：操作指南 -->
+            <div class="text-xs text-slate-600 bg-slate-50/90 border border-slate-200/80 rounded-xl px-3.5 py-2.5 leading-relaxed w-full">
               <span class="font-semibold text-indigo-700">💡 交互修谱指南：</span>
-              点击谱上绿框选中音符；按住音符上下拖动可直接变音并实时试听；点击五线谱空白区域直接补加音符；按键盘 Delete 键删除杂质。
+              点击绿框选中音符；按住音符上下拖动可直接变音并实时试听；点击空白区域直接补音；<span class="font-semibold text-violet-700">按住鼠标拖拽拉框可自动批量提取框内全部音符</span>；按键盘 Delete 键删除杂质。
             </div>
-            <div id="omrStatsBadge" class="text-xs text-emerald-800 bg-emerald-50/90 border border-emerald-200 rounded-xl px-3.5 py-2.5 flex items-center space-x-1.5 whitespace-nowrap">
-              <span>✅ 已识别到五线谱组与音符</span>
+            <!-- 第 2 行：识别状态与统计 -->
+            <div id="omrStatsBadge" class="text-xs text-emerald-800 bg-emerald-50/90 border border-emerald-200 rounded-xl px-3.5 py-2 flex items-center justify-between w-full">
+              <span>✅ 已识别到五线谱组与音符（支持在大图上拉框智能框选补音）</span>
             </div>
           </div>
 
@@ -714,33 +720,35 @@
             </div>
           </div>
 
-          <!-- 3. 五线谱交互修谱底栏 (处于五线谱修谱时展示：浅色系、单排平铺、包含唯一确认按钮) -->
-          <div id="omrBottomDock" class="hidden px-3.5 sm:px-4 py-2 sm:py-2.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex items-center justify-between gap-2 shadow-xl shadow-slate-900/10 w-full flex-nowrap overflow-x-auto animate-fadeInUp">
-            <!-- 当前选中音符信息 -->
-            <div class="flex items-center space-x-1.5 flex-shrink-0">
-              <span class="text-xs text-slate-400 whitespace-nowrap">选中:</span>
-              <span id="omrSelectedNoteBadge" class="font-mono-score font-bold px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 text-xs border border-indigo-200 whitespace-nowrap">未选择</span>
+<!-- 3. 五线谱交互修谱底栏 (处于五线谱修谱时展示：浅色系、两行布局、确认按钮单独放一行) -->
+          <div id="omrBottomDock" class="hidden px-3.5 sm:px-4 py-2.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl flex flex-col space-y-2 shadow-xl shadow-slate-900/10 w-full animate-fadeInUp">
+            
+            <!-- 第 1 行：当前选中音符信息与微调操作按钮组 -->
+            <div class="flex items-center justify-between gap-2 w-full flex-wrap sm:flex-nowrap">
+              <!-- 当前选中音符信息 -->
+              <div class="flex items-center space-x-1.5 flex-shrink-0">
+                <span class="text-xs text-slate-400 whitespace-nowrap">选中:</span>
+                <span id="omrSelectedNoteBadge" class="font-mono-score font-bold px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 text-xs border border-indigo-200 whitespace-nowrap">未选择</span>
+              </div>
+
+              <!-- 音符微调操作按钮组 (浅色质感，整齐横排) -->
+              <div class="flex items-center gap-1.5 flex-wrap flex-shrink-0">
+                <button onclick="omrAdjustPitch(1)" title="升半音 (+半音)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-amber-700 text-xs font-mono font-bold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">♯ +半音</button>
+                <button onclick="omrAdjustPitch(-1)" title="降半音 (-半音)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-amber-700 text-xs font-mono font-bold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">♭ -半音</button>
+                <button onclick="omrAdjustDiatonic(1)" title="向上移动一个音级 (如 1->2)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 text-xs font-semibold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">↑ 高一度</button>
+                <button onclick="omrAdjustDiatonic(-1)" title="向下移动一个音级 (如 2->1)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 text-xs font-semibold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">↓ 低一度</button>
+                <button onclick="omrCycleDuration()" title="切换时值 (全/二分/四分/八分)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-emerald-700 text-xs font-semibold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">♩ 切换时值</button>
+                <button onclick="omrDeleteSelectedNote()" title="删除误识别音符" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-xl border border-rose-200 cursor-pointer shadow-2xs transition whitespace-nowrap">🗑️ 删除此音</button>
+              </div>
             </div>
 
-            <!-- 音符微调操作按钮组 (浅色质感) -->
-            <div class="flex items-center gap-1.5 flex-nowrap flex-shrink-0">
-              <button onclick="omrAdjustPitch(1)" title="升半音 (+半音)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-amber-700 text-xs font-mono font-bold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">♯ +半音</button>
-              <button onclick="omrAdjustPitch(-1)" title="降半音 (-半音)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-amber-700 text-xs font-mono font-bold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">♭ -半音</button>
-              <button onclick="omrAdjustDiatonic(1)" title="向上移动一个音级 (如 1->2)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 text-xs font-semibold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">↑ 高一度</button>
-              <button onclick="omrAdjustDiatonic(-1)" title="向下移动一个音级 (如 2->1)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 text-xs font-semibold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">↓ 低一度</button>
-              <button onclick="omrCycleDuration()" title="切换时值 (全/二分/四分/八分)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-emerald-700 text-xs font-semibold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">♩ 切换时值</button>
-              <button onclick="omrDeleteSelectedNote()" title="删除误识别音符" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-xl border border-rose-200 cursor-pointer shadow-2xs transition whitespace-nowrap">🗑️ 删除此音</button>
-            </div>
-
-            <!-- 中间分隔线 -->
-            <div class="h-6 w-px bg-slate-200 hidden sm:block flex-shrink-0 mx-1"></div>
-
-            <!-- 唯一的确认并生成简谱按钮 (放底部悬浮栏) -->
-            <div class="flex-shrink-0">
-              <button onclick="confirmOmrAndSwitchToJianpu()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap">
-                <span>✨ 确认谱面，生成简谱 →</span>
+            <!-- 第 2 行：唯一的确认并生成简谱按钮 (单独放一行，全宽居中醒目大按钮) -->
+            <div class="w-full pt-1.5 border-t border-slate-100/90 flex items-center justify-center">
+              <button onclick="confirmOmrAndSwitchToJianpu()" class="w-full sm:w-auto px-10 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:shadow transition flex items-center justify-center space-x-2 cursor-pointer whitespace-nowrap">
+                <span>✨ 确认谱面，生成出版级简谱 →</span>
               </button>
             </div>
+
           </div>
 
         </div>
@@ -2106,7 +2114,7 @@
     function processSheetImage(img) {
       lastLoadedSheetImg = img;
       const offCanvas = document.createElement('canvas');
-      const maxWidth = 1350;
+      const maxWidth = 1400;
       const scale = img.width > maxWidth ? maxWidth / img.width : 1;
       offCanvas.width = Math.round(img.width * scale);
       offCanvas.height = Math.round(img.height * scale);
@@ -2126,10 +2134,10 @@
         gray[i] = Math.round(0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2]);
       }
 
-      // 局部自适应二值化 (窗长约 2.2 倍常见线距，阈值百分比 14%)
+      // 局部自适应二值化
       const sensitivityEl = document.getElementById('selectOmrSensitivity');
       const sens = sensitivityEl ? sensitivityEl.value : 'medium';
-      const threshRatio = sens === 'high' ? 0.10 : (sens === 'strict' ? 0.18 : 0.14);
+      const threshRatio = sens === 'high' ? 0.09 : (sens === 'strict' ? 0.18 : 0.13);
       const winSize = Math.max(16, Math.min(48, Math.round(w / 30)));
       let binary = bradleyAdaptiveBinarize(gray, w, h, winSize, threshRatio);
 
@@ -2138,7 +2146,7 @@
       const estT = rle.t;
       const estD = rle.d;
 
-      // 倾斜校正 (投影方差极大值法)
+      // 倾斜校正
       let detectedTiltAngle = 0;
       const cx = w / 2, cy = h / 2;
       const samplePoints = [];
@@ -2198,7 +2206,7 @@
         binary = bradleyAdaptiveBinarize(gray, w, h, winSize, threshRatio);
       }
 
-      // 统计五线谱水平线
+      // 统计五线谱水平线 (提高对断线、细线的包容度)
       const rowHist = new Int32Array(h);
       for (let y = 0; y < h; y++) {
         let count = 0;
@@ -2209,12 +2217,12 @@
       }
 
       const maxRowDark = Math.max(...rowHist);
-      const lineThreshold = Math.max(w * 0.22, maxRowDark * 0.38);
+      const lineThreshold = Math.max(w * 0.16, maxRowDark * 0.28);
       const candidateYs = [];
 
       for (let y = 2; y < h - 2; y++) {
         if (rowHist[y] >= lineThreshold && rowHist[y] >= rowHist[y - 1] && rowHist[y] >= rowHist[y + 1]) {
-          if (candidateYs.length === 0 || y - candidateYs[candidateYs.length - 1] >= Math.round(estD * 0.65)) {
+          if (candidateYs.length === 0 || y - candidateYs[candidateYs.length - 1] >= Math.round(estD * 0.60)) {
             candidateYs.push(y);
           }
         }
@@ -2231,14 +2239,14 @@
           group[4] - group[3]
         ];
         const avgD = spacings.reduce((a, b) => a + b, 0) / 4;
-        const isRegular = spacings.every(s => Math.abs(s - avgD) <= Math.max(3.5, avgD * 0.28));
+        const isRegular = spacings.every(s => Math.abs(s - avgD) <= Math.max(3.5, avgD * 0.32));
         if (isRegular && avgD >= 6) {
           staffSystems.push({
             lines: group,
             d: avgD,
             t: estT,
-            topY: Math.max(0, Math.round(group[0] - avgD * 3.2)),
-            bottomY: Math.min(h - 1, Math.round(group[4] + avgD * 3.2))
+            topY: Math.max(0, Math.round(group[0] - avgD * 3.5)),
+            bottomY: Math.min(h - 1, Math.round(group[4] + avgD * 3.5))
           });
           i += 5;
         } else {
@@ -2248,190 +2256,179 @@
 
       if (staffSystems.length === 0) {
         showToast('未能自动检测到标准五线谱横线，请确认图片平整或使用高灵敏模式', 'warning');
-        STATE.omrData = { img: offCanvas, systems: [], notes: [], selectedNoteIndex: null };
-        document.getElementById('omrPreviewContainer').classList.remove('hidden');
+        STATE.omrData = { img: offCanvas, systems: [], notes: [], selectedNoteIndex: null, binary, binaryW: w, binaryH: h };
         renderOmrCanvas();
         return;
       }
 
-      // 穿线符头保护去线算法 (Protected Staff Line Removal)
-      // 仅消除孤立薄横线，当垂直黑像素跨度 > 2.2*t 时保留(为符头或符干像素)
-      const noLines = new Uint8Array(w * h);
-      noLines.set(binary);
+      // ========================================================================
+      // 高召回率形态学开运算符头分离引擎 (Request 4: 彻底解决零散识别问题)
+      // 通过椭圆核剥离细符干、连音横梁与孤立谱线，使连音符、和弦、低音谱表全部显现！
+      // ========================================================================
+      const globalD = staffSystems.reduce((acc, s) => acc + s.d, 0) / staffSystems.length;
+      const rx = Math.max(2, Math.round(globalD * 0.28));
+      const ry = Math.max(2, Math.round(globalD * 0.22));
 
-      const staffLineMargin = Math.max(1, Math.round(estT * 0.8));
-      for (const sys of staffSystems) {
-        for (const ly of sys.lines) {
-          for (let dy = -staffLineMargin; dy <= staffLineMargin; dy++) {
-            const y = ly + dy;
-            if (y < 0 || y >= h) continue;
-            for (let x = 0; x < w; x++) {
-              if (binary[y * w + x] === 1) {
-                // 探测此像素在垂直方向的黑游程连续长度
-                let vRun = 1;
-                let sy = y - 1;
-                while (sy >= 0 && binary[sy * w + x] === 1) { vRun++; sy--; }
-                sy = y + 1;
-                while (sy < h && binary[sy * w + x] === 1) { vRun++; sy++; }
-                // 若垂直厚度未显著超过谱线，则去除横线；若显著超过则说明穿过符头/符干，坚决保留！
-                if (vRun <= Math.max(2, Math.round(estT * 2.2))) {
-                  noLines[y * w + x] = 0;
-                }
+      const offsets = [];
+      for (let dy = -ry; dy <= ry; dy++) {
+        for (let dx = -rx; dx <= rx; dx++) {
+          if ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.05) offsets.push([dx, dy]);
+        }
+      }
+
+      // 腐蚀 (Erosion)
+      const eroded = new Uint8Array(w * h);
+      for (let y = ry; y < h - ry; y++) {
+        const yW = y * w;
+        for (let x = rx; x < w - rx; x++) {
+          if (binary[yW + x] === 0) continue;
+          let allBlack = true;
+          for (let i = 0; i < offsets.length; i++) {
+            if (binary[(y + offsets[i][1]) * w + (x + offsets[i][0])] !== 1) {
+              allBlack = false;
+              break;
+            }
+          }
+          if (allBlack) eroded[yW + x] = 1;
+        }
+      }
+
+      // 膨胀 (Dilation) -> 得到纯净符头掩模 (Opened Noteheads)
+      const opened = new Uint8Array(w * h);
+      for (let y = 0; y < h; y++) {
+        const yW = y * w;
+        for (let x = 0; x < w; x++) {
+          if (eroded[yW + x] === 1) {
+            for (let i = 0; i < offsets.length; i++) {
+              const nx = x + offsets[i][0];
+              const ny = y + offsets[i][1];
+              if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                opened[ny * w + nx] = 1;
               }
             }
           }
         }
       }
 
-      // 符头形态学与质心匹配
-      const clef = document.querySelector('input[name="clefType"]:checked').value;
-      const bottomLineDiatonic = clef === 'treble' ? 2 : 4; // 高音谱号底线 E4, 低音谱号底线 G2
-      const baseOctave = clef === 'treble' ? 4 : 2;
-      const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
+      // 提取全部高保真符头连通域
+      const visited = new Uint8Array(w * h);
+      const rawComps = [];
 
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const idx = y * w + x;
+          if (opened[idx] === 1 && !visited[idx]) {
+            let q = [[x, y]], area = 0, sumX = 0, sumY = 0;
+            let cMinX = x, cMaxX = x, cMinY = y, cMaxY = y;
+            visited[idx] = 1;
+
+            while (q.length > 0) {
+              const [qx, qy] = q.pop();
+              area++;
+              sumX += qx;
+              sumY += qy;
+              if (qx < cMinX) cMinX = qx;
+              if (qx > cMaxX) cMaxX = qx;
+              if (qy < cMinY) cMinY = qy;
+              if (qy > cMaxY) cMaxY = qy;
+
+              for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+                const nx = qx + dx, ny = qy + dy;
+                if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                  const nIdx = ny * w + nx;
+                  if (opened[nIdx] === 1 && !visited[nIdx]) {
+                    visited[nIdx] = 1;
+                    q.push([nx, ny]);
+                  }
+                }
+              }
+            }
+
+            const bw = cMaxX - cMinX + 1;
+            const bh = cMaxY - cMinY + 1;
+            const cx = Math.round(sumX / area);
+            const cy = Math.round(sumY / area);
+
+            // 避开极端细长或过大噪点
+            if (area >= globalD * globalD * 0.15 && area <= globalD * globalD * 8.0) {
+              rawComps.push({ cx, cy, cMinX, cMaxX, cMinY, cMaxY, bw, bh, area });
+            }
+          }
+        }
+      }
+
+      const clefMode = document.querySelector('input[name="clefType"]:checked').value;
+      const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
       const detectedNotes = [];
       let globalNoteId = 1;
 
       staffSystems.forEach((sys, sysIdx) => {
         const d = sys.d;
         const bottomLineY = sys.lines[4];
-        const visited = new Uint8Array(w * h);
+        const isTreble = clefMode === 'treble' ? true : (clefMode === 'bass' ? false : (sysIdx % 2 === 0));
+        const bottomDiatonic = isTreble ? 2 : 4;
+        const baseOct = isTreble ? 4 : 2;
+
+        // 避开左侧大谱号与调号区域 (约 3.2 个线间距)
+        const leftBound = Math.round(d * 3.2);
+        const rightBound = w - Math.round(d * 0.5);
+
+        const sysComps = rawComps.filter(c => {
+          return c.cx >= leftBound && c.cx <= rightBound && c.cy >= sys.topY && c.cy <= sys.bottomY;
+        });
+
+        // 拆分与整理符头
         const sysNotes = [];
+        for (const comp of sysComps) {
+          // 若为连音线横梁聚合块 (宽度大于 1.6d)，拆分为多个音符
+          if (comp.bw >= d * 1.6) {
+            const colHist = new Int32Array(comp.bw);
+            for (let sy = comp.cMinY; sy <= comp.cMaxY; sy++) {
+              for (let sx = comp.cMinX; sx <= comp.cMaxX; sx++) {
+                if (opened[sy * w + sx]) colHist[sx - comp.cMinX]++;
+              }
+            }
+            for (let sx = 1; sx < comp.bw - 1; sx++) {
+              if (colHist[sx] >= d * 0.4 && colHist[sx] >= colHist[sx - 1] && colHist[sx] >= colHist[sx + 1]) {
+                const subX = comp.cMinX + sx;
+                const step = Math.round((bottomLineY - comp.cy) / (d / 2));
+                const totalDiatonic = bottomDiatonic + step;
+                const octOffset = Math.floor(totalDiatonic / 7);
+                const deg = ((totalDiatonic % 7) + 7) % 7;
+                const midi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
 
-        // 避开左侧谱号区域 (约 3.6 个线间距)
-        const leftBound = Math.round(d * 3.6);
-        const rightBound = w - Math.round(d);
-
-        const rawComps = [];
-        for (let x = leftBound; x < rightBound; x++) {
-          for (let y = sys.topY; y <= sys.bottomY; y++) {
-            const idx = y * w + x;
-            if (noLines[idx] && !visited[idx]) {
-              let minX = x, maxX = x, minY = y, maxY = y, area = 0;
-              const queue = [[x, y]];
-              visited[idx] = 1;
-
-              while (queue.length > 0) {
-                const [cx, cy] = queue.shift();
-                area++;
-                if (cx < minX) minX = cx;
-                if (cx > maxX) maxX = cx;
-                if (cy < minY) minY = cy;
-                if (cy > maxY) maxY = cy;
-
-                for (let dx = -1; dx <= 1; dx++) {
-                  for (let dy = -1; dy <= 1; dy++) {
-                    const nx = cx + dx, ny = cy + dy;
-                    if (nx >= leftBound && nx < rightBound && ny >= sys.topY && ny <= sys.bottomY) {
-                      const nIdx = ny * w + nx;
-                      if (noLines[nIdx] && !visited[nIdx]) {
-                        visited[nIdx] = 1;
-                        queue.push([nx, ny]);
-                      }
-                    }
+                sysNotes.push({
+                  id: globalNoteId++,
+                  x: subX,
+                  y: comp.cy,
+                  midi,
+                  duration: 1,
+                  isRest: false,
+                  step,
+                  sysIdx,
+                  box: {
+                    x: Math.round(subX - d * 0.6),
+                    y: Math.round(bottomLineY - step * (d / 2) - d * 0.55),
+                    w: Math.round(d * 1.2),
+                    h: Math.round(d * 1.1)
                   }
-                }
-              }
-
-              const bw = maxX - minX + 1;
-              const bh = maxY - minY + 1;
-
-              // 过滤极窄竖直线条 (小节线)
-              if (bw <= 3 && bh >= d * 2.5) continue;
-              if (area >= Math.round(d * 2.2)) {
-                rawComps.push({ minX, maxX, minY, maxY, bw, bh, area });
+                });
               }
             }
-          }
-        }
+          } else if (comp.bw >= d * 0.35 && comp.bw <= d * 2.8 && comp.bh >= d * 0.35 && comp.bh <= d * 2.8) {
+            const step = Math.round((bottomLineY - comp.cy) / (d / 2));
+            const totalDiatonic = bottomDiatonic + step;
+            const octOffset = Math.floor(totalDiatonic / 7);
+            const deg = ((totalDiatonic % 7) + 7) % 7;
+            const midi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
 
-        // 智能重组被谱线切开的空心符头左右圆弧
-        rawComps.sort((a, b) => a.minX - b.minX);
-        const mergedComps = [];
-        for (let i = 0; i < rawComps.length; i++) {
-          const c = rawComps[i];
-          if (mergedComps.length > 0) {
-            const prev = mergedComps[mergedComps.length - 1];
-            const isHorizClose = (c.minX - prev.maxX) <= d * 0.85;
-            const isVertOverlap = (c.minY <= prev.maxY && c.maxY >= prev.minY);
-            if (isHorizClose && isVertOverlap) {
-              prev.minX = Math.min(prev.minX, c.minX);
-              prev.maxX = Math.max(prev.maxX, c.maxX);
-              prev.minY = Math.min(prev.minY, c.minY);
-              prev.maxY = Math.max(prev.maxY, c.maxY);
-              prev.bw = prev.maxX - prev.minX + 1;
-              prev.bh = prev.maxY - prev.minY + 1;
-              prev.area += c.area;
-              continue;
-            }
-          }
-          mergedComps.push({ ...c });
-        }
-
-        for (const comp of mergedComps) {
-          const { minX, maxX, minY, maxY, bw, bh, area } = comp;
-
-          // 符头特征匹配 (宽度约 0.50d ~ 2.6d)
-          if (bw >= d * 0.48 && bw <= d * 2.6 && bh >= d * 0.48 && bh <= d * 5.2 && area >= d * d * 0.18) {
-            // 搜索符头椭圆的横向最宽鼓包中心 Y (基于符干朝向剥离符干干扰)
-            let searchMinY = minY + 1;
-            let searchMaxY = maxY - 1;
-
-            if (bh >= d * 1.8) {
-              // 符干朝向判别：符干在左向下延伸(符头在顶部)；符干在右向上延伸(符头在底部)
-              let leftStems = 0, rightStems = 0;
-              for (let sy = minY; sy <= maxY; sy++) {
-                if (noLines[sy * w + minX] || noLines[sy * w + minX + 1]) leftStems++;
-                if (noLines[sy * w + maxX] || noLines[sy * w + maxX - 1]) rightStems++;
-              }
-              if (leftStems > rightStems) {
-                searchMinY = minY;
-                searchMaxY = Math.min(maxY, Math.round(minY + d * 1.4));
-              } else {
-                searchMinY = Math.max(minY, Math.round(maxY - d * 1.4));
-                searchMaxY = maxY;
-              }
-            }
-
-            // 确定符头椭圆区域的上下边界与几何质心 (对实心与空心符头均适用)
-            let headMinY = searchMinY, headMaxY = searchMaxY;
-            for (let sy = searchMinY; sy <= searchMaxY; sy++) {
-              let count = 0;
-              for (let sx = minX; sx <= maxX; sx++) {
-                if (noLines[sy * w + sx]) count++;
-              }
-              if (count >= 3) {
-                headMinY = sy;
-                break;
-              }
-            }
-            for (let sy = searchMaxY; sy >= searchMinY; sy--) {
-              let count = 0;
-              for (let sx = minX; sx <= maxX; sx++) {
-                if (noLines[sy * w + sx]) count++;
-              }
-              if (count >= 3) {
-                headMaxY = sy;
-                break;
-              }
-            }
-            const bestHeadY = (headMinY + headMaxY) / 2;
-
-            // 避免同一音符符头与连音线多重重复触发
-            if (sysNotes.length > 0 && Math.abs(minX - sysNotes[sysNotes.length - 1].x) < d * 0.70) {
-              continue;
-            }
-
-            const centerX = Math.round((minX + maxX) / 2);
-            const centerY = Math.round(bestHeadY);
-
-            // 判断空心(全/二分)还是实心(四/八分)
+            // 判别空心(二分/全音)
             let coreDark = 0, coreTotal = 0;
-            const rx = Math.max(2, Math.round(d * 0.28));
-            const ry = Math.max(2, Math.round(d * 0.22));
-            for (let dy = -ry; dy <= ry; dy++) {
-              for (let dx = -rx; dx <= rx; dx++) {
-                const px = centerX + dx, py = centerY + dy;
+            const crx = Math.max(2, Math.round(d * 0.25));
+            const cry = Math.max(2, Math.round(d * 0.20));
+            for (let dy = -cry; dy <= cry; dy++) {
+              for (let dx = -crx; dx <= crx; dx++) {
+                const px = comp.cx + dx, py = comp.cy + dy;
                 if (px >= 0 && px < w && py >= 0 && py < h) {
                   coreTotal++;
                   if (binary[py * w + px] === 1) coreDark++;
@@ -2440,39 +2437,37 @@
             }
             const isHollow = (coreDark / Math.max(1, coreTotal)) < 0.45;
 
-            // 计算相对五线谱底线的半间距步数，并吸附到整音级
-            const continuousStep = (bottomLineY - bestHeadY) / (d / 2);
-            const snappedStep = Math.round(continuousStep);
-
-            // 计算 MIDI 音高与唱名
-            const totalDiatonic = bottomLineDiatonic + snappedStep;
-            const octaveOffset = Math.floor(totalDiatonic / 7);
-            const deg = ((totalDiatonic % 7) + 7) % 7;
-            const midi = (baseOctave + octaveOffset + 1) * 12 + diatonicSemitones[deg];
-
-            const noteObj = {
+            sysNotes.push({
               id: globalNoteId++,
-              x: centerX,
-              y: centerY,
+              x: comp.cx,
+              y: comp.cy,
               midi,
               duration: isHollow ? 2 : 1,
               isRest: false,
-              step: snappedStep,
+              step,
               sysIdx,
               box: {
-                x: minX - 2,
-                y: centerY - Math.round(d * 0.55),
-                w: bw + 4,
+                x: Math.round(comp.cx - d * 0.6),
+                y: Math.round(bottomLineY - step * (d / 2) - d * 0.55),
+                w: Math.round(d * 1.2),
                 h: Math.round(d * 1.1)
               }
-            };
-
-            sysNotes.push(noteObj);
+            });
           }
         }
 
+        // 去重过于邻近的同音符
         sysNotes.sort((a, b) => a.x - b.x);
-        detectedNotes.push(...sysNotes);
+        const filteredSysNotes = [];
+        for (const n of sysNotes) {
+          if (filteredSysNotes.length > 0) {
+            const prev = filteredSysNotes[filteredSysNotes.length - 1];
+            if (Math.abs(n.x - prev.x) < d * 0.45 && Math.abs(n.y - prev.y) < d * 0.45) continue;
+          }
+          filteredSysNotes.push(n);
+        }
+
+        detectedNotes.push(...filteredSysNotes);
       });
 
       STATE.omrData = {
@@ -2480,7 +2475,10 @@
         systems: staffSystems,
         notes: detectedNotes,
         selectedNoteIndex: detectedNotes.length > 0 ? 0 : null,
-        isDragging: false
+        binary,
+        binaryW: w,
+        binaryH: h,
+        selectionBox: null
       };
 
       // 更新顶部徽章与左侧状态卡
@@ -2496,32 +2494,27 @@
         leftStatusCard.classList.remove('hidden');
       }
 
-      // 自动切换至中间【五线谱大图定位与校对工作台】供用户审阅修谱
+      // 自动切换至中间【五线谱大图定位与校对工作台】
       switchCenterView('omr');
       renderOmrCanvas();
       updateOmrToolbarBadge();
 
-      if (detectedNotes.length === 0) {
-        showToast('已定位五线谱表，但未能提取到音符，请调整探测灵敏度或尝试更平整乐谱', 'warning');
-        return;
-      }
-
       const tiltInfo = Math.abs(detectedTiltAngle) >= 0.4
         ? `📐 倾斜校正: ${detectedTiltAngle > 0 ? '+' : ''}${detectedTiltAngle.toFixed(1)}°`
         : `📐 谱面水平度良好`;
-      document.getElementById('omrStatsBadge').innerHTML =
-        `<span>✅ 识别成功：${tiltInfo} · 定位 ${staffSystems.length} 组谱表，提取 ${detectedNotes.length} 个音符（点击谱面可交互微调）</span>`;
+      const statsBadgeEl = document.getElementById('omrStatsBadge');
+      if (statsBadgeEl) {
+        statsBadgeEl.innerHTML =
+          `<span>✅ 识别成功：${tiltInfo} · 定位 ${staffSystems.length} 组谱表，提取 ${detectedNotes.length} 个音符（支持在大图上拉框智能框选补音）</span>`;
+      }
 
       STATE.notes = detectedNotes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
       updateHeaderLabels();
       renderJianpuScore();
       syncRawTextFromNotes();
-      showToast(`五线谱已在中间工作台展开！请核对音符，确认后点击生成简谱`, 'success');
+      showToast(`五线谱已展开！已高精提取 ${detectedNotes.length} 个音符，支持拉框框选补音`, 'success');
     }
 
-    // ========================================================================
-    // 中间工作台主视图切换 (出版级简谱 <--> 五线谱原图交互修谱)
-    // ========================================================================
     function switchCenterView(view) {
       const jianpuWs = document.getElementById('centerJianpuWorkspace');
       const omrWs = document.getElementById('centerOmrWorkspace');
@@ -2590,9 +2583,9 @@
 
       if (!document.getElementById('toggleOmrOverlay').checked) return;
 
-      // 绘制五线谱辅助线 (柔和靛蓝半透)
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.45)';
-      ctx.lineWidth = 1.5;
+      // 绘制五线谱辅助线 (柔和半透)
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.40)';
+      ctx.lineWidth = 1.4;
       for (const sys of STATE.omrData.systems) {
         for (const ly of sys.lines) {
           ctx.beginPath();
@@ -2629,7 +2622,7 @@
           ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
           ctx.fillRect(box.x, box.y, box.w, box.h);
           ctx.strokeStyle = '#10b981';
-          ctx.lineWidth = 1.8;
+          ctx.lineWidth = 1.6;
           ctx.strokeRect(box.x, box.y, box.w, box.h);
         }
 
@@ -2651,14 +2644,53 @@
         ctx.textAlign = 'center';
         ctx.fillText(labelText, box.x + box.w / 2, badgeY);
       });
+
+      // 绘制鼠标拖拽框选虚线矩形与智能提示 (Request 5)
+      if (STATE.omrData && STATE.omrData.selectionBox) {
+        const sb = STATE.omrData.selectionBox;
+        const bx = Math.min(sb.startX, sb.currentX);
+        const by = Math.min(sb.startY, sb.currentY);
+        const bw = Math.abs(sb.currentX - sb.startX);
+        const bh = Math.abs(sb.currentY - sb.startY);
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(99, 102, 241, 0.18)';
+        ctx.fillRect(bx, by, bw, bh);
+        ctx.strokeStyle = '#4f46e5';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.strokeRect(bx, by, bw, bh);
+
+        // 浮动操作提示气泡
+        if (bw >= 15 && bh >= 15) {
+          ctx.setLineDash([]);
+          ctx.font = 'bold 11px sans-serif';
+          const tipText = '🔍 松开鼠标即可批量提取框内音符';
+          const tw = ctx.measureText(tipText).width;
+          const tipX = Math.max(10, Math.min(canvas.width - tw - 20, bx + bw / 2 - tw / 2 - 8));
+          const tipY = by + bh + 4 <= canvas.height - 24 ? by + bh + 4 : by - 24;
+          
+          ctx.fillStyle = '#4338ca';
+          ctx.beginPath();
+          ctx.roundRect(tipX, tipY, tw + 16, 20, 6);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'left';
+          ctx.fillText(tipText, tipX + 8, tipY + 14);
+        }
+        ctx.restore();
+      }
     }
 
-    // 交互修谱：鼠标拖拽变音与点击事件监听
+    // 交互修谱：鼠标拖拽变音、单击补音与拉框批量框选 (Request 5)
     function initOmrCanvasInteractions() {
       const canvas = document.getElementById('omrCanvas');
       if (!canvas) return;
 
-      let isDragging = false;
+      let isDraggingNote = false;
+      let isBoxSelecting = false;
+      let startMouseX = 0;
       let startMouseY = 0;
       let initialMidi = 60;
       let initialStep = 0;
@@ -2687,126 +2719,120 @@
       canvas.addEventListener('mousedown', (e) => {
         if (!STATE.omrData || !STATE.omrData.img) return;
         const coords = getCanvasCoords(e);
+        startMouseX = coords.x;
+        startMouseY = coords.y;
+
         const hitIdx = findNoteAt(coords.x, coords.y);
 
         if (hitIdx !== -1) {
+          // 命中现有音符：进入单音拖拽变音模式
           STATE.omrData.selectedNoteIndex = hitIdx;
           const note = STATE.omrData.notes[hitIdx];
-          isDragging = true;
-          startMouseY = coords.y;
+          isDraggingNote = true;
           initialMidi = note.midi;
           initialStep = note.step;
           playOmrPreviewTone(note.midi);
           updateOmrToolbarBadge();
           renderOmrCanvas();
         } else {
-          // 点击在空白五线谱区域：自动吸附添加新音符！
-          for (let sIdx = 0; sIdx < STATE.omrData.systems.length; sIdx++) {
-            const sys = STATE.omrData.systems[sIdx];
-            if (coords.y >= sys.topY && coords.y <= sys.bottomY) {
-              const d = sys.d;
-              const bottomLineY = sys.lines[4];
-              const step = Math.round((bottomLineY - coords.y) / (d / 2));
-              
-              const clef = document.querySelector('input[name="clefType"]:checked').value;
-              const bottomDiatonic = clef === 'treble' ? 2 : 4;
-              const baseOct = clef === 'treble' ? 4 : 2;
-              const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
-
-              const totalDiatonic = bottomDiatonic + step;
-              const octOffset = Math.floor(totalDiatonic / 7);
-              const deg = ((totalDiatonic % 7) + 7) % 7;
-              const midi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
-
-              const newNote = {
-                id: Date.now(),
-                x: Math.round(coords.x),
-                y: Math.round(bottomLineY - step * (d / 2)),
-                midi,
-                duration: 1,
-                isRest: false,
-                step,
-                sysIdx: sIdx,
-                box: {
-                  x: Math.round(coords.x - d * 0.6),
-                  y: Math.round(bottomLineY - step * (d / 2) - d * 0.55),
-                  w: Math.round(d * 1.2),
-                  h: Math.round(d * 1.1)
-                }
-              };
-
-              STATE.omrData.notes.push(newNote);
-              STATE.omrData.notes.sort((a, b) => a.x - b.x);
-              STATE.omrData.selectedNoteIndex = STATE.omrData.notes.indexOf(newNote);
-
-              STATE.notes = STATE.omrData.notes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
-              playOmrPreviewTone(midi);
-              updateOmrToolbarBadge();
-              renderOmrCanvas();
-              renderJianpuScore();
-              syncRawTextFromNotes();
-              showToast('已在五线谱上补加新音符', 'success');
-              break;
-            }
-          }
+          // 点击空白区域：准备拉框框选或单点加音
+          isBoxSelecting = true;
+          STATE.omrData.selectionBox = {
+            startX: coords.x,
+            startY: coords.y,
+            currentX: coords.x,
+            currentY: coords.y
+          };
         }
       });
 
       canvas.addEventListener('mousemove', (e) => {
-        if (!isDragging || STATE.omrData.selectedNoteIndex === null) {
-          const coords = getCanvasCoords(e);
-          const hitIdx = findNoteAt(coords.x, coords.y);
-          canvas.style.cursor = hitIdx !== -1 ? 'grab' : 'crosshair';
+        if (!STATE.omrData || !STATE.omrData.img) return;
+        const coords = getCanvasCoords(e);
+
+        if (isDraggingNote && STATE.omrData.selectedNoteIndex !== null) {
+          canvas.style.cursor = 'ns-resize';
+          const note = STATE.omrData.notes[STATE.omrData.selectedNoteIndex];
+          const sys = STATE.omrData.systems[note.sysIdx] || STATE.omrData.systems[0];
+          const d = sys.d;
+          const deltaPixels = startMouseY - coords.y; // 向上拖为正
+          const deltaSteps = Math.round(deltaPixels / (d / 2));
+
+          if (deltaSteps !== 0) {
+            const newStep = initialStep + deltaSteps;
+            const clefMode = document.querySelector('input[name="clefType"]:checked').value;
+            const isTreble = clefMode === 'treble' ? true : (clefMode === 'bass' ? false : (note.sysIdx % 2 === 0));
+            const bottomDiatonic = isTreble ? 2 : 4;
+            const baseOct = isTreble ? 4 : 2;
+            const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
+
+            const totalDiatonic = bottomDiatonic + newStep;
+            const octOffset = Math.floor(totalDiatonic / 7);
+            const deg = ((totalDiatonic % 7) + 7) % 7;
+            const newMidi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
+
+            if (newMidi !== note.midi) {
+              note.step = newStep;
+              note.midi = newMidi;
+              note.y = Math.round(sys.lines[4] - newStep * (d / 2));
+              note.box.y = Math.round(note.y - d * 0.55);
+
+              STATE.notes = STATE.omrData.notes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
+              playOmrPreviewTone(newMidi, 0.15);
+              updateOmrToolbarBadge();
+              renderOmrCanvas();
+              renderJianpuScore();
+              syncRawTextFromNotes();
+            }
+          }
           return;
         }
 
-        canvas.style.cursor = 'ns-resize';
-        const coords = getCanvasCoords(e);
-        const note = STATE.omrData.notes[STATE.omrData.selectedNoteIndex];
-        const sys = STATE.omrData.systems[note.sysIdx];
-        const d = sys.d;
-        const deltaPixels = startMouseY - coords.y; // 向上拖为正
-        const deltaSteps = Math.round(deltaPixels / (d / 2));
-
-        if (deltaSteps !== 0) {
-          const newStep = initialStep + deltaSteps;
-          const clef = document.querySelector('input[name="clefType"]:checked').value;
-          const bottomDiatonic = clef === 'treble' ? 2 : 4;
-          const baseOct = clef === 'treble' ? 4 : 2;
-          const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
-
-          const totalDiatonic = bottomDiatonic + newStep;
-          const octOffset = Math.floor(totalDiatonic / 7);
-          const deg = ((totalDiatonic % 7) + 7) % 7;
-          const newMidi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
-
-          if (newMidi !== note.midi) {
-            note.step = newStep;
-            note.midi = newMidi;
-            note.y = Math.round(sys.lines[4] - newStep * (d / 2));
-            note.box.y = Math.round(note.y - d * 0.55);
-
-            STATE.notes = STATE.omrData.notes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
-            playOmrPreviewTone(newMidi, 0.15);
-            updateOmrToolbarBadge();
-            renderOmrCanvas();
-            renderJianpuScore();
-            syncRawTextFromNotes();
-          }
+        if (isBoxSelecting && STATE.omrData.selectionBox) {
+          canvas.style.cursor = 'crosshair';
+          STATE.omrData.selectionBox.currentX = coords.x;
+          STATE.omrData.selectionBox.currentY = coords.y;
+          renderOmrCanvas();
+          return;
         }
+
+        const hitIdx = findNoteAt(coords.x, coords.y);
+        canvas.style.cursor = hitIdx !== -1 ? 'grab' : 'crosshair';
       });
 
-      window.addEventListener('mouseup', () => {
-        if (isDragging) {
-          isDragging = false;
+      window.addEventListener('mouseup', (e) => {
+        if (isDraggingNote) {
+          isDraggingNote = false;
           canvas.style.cursor = 'crosshair';
+        }
+
+        if (isBoxSelecting && STATE.omrData && STATE.omrData.selectionBox) {
+          const sb = STATE.omrData.selectionBox;
+          isBoxSelecting = false;
+          STATE.omrData.selectionBox = null;
+
+          const dragDist = Math.hypot(sb.currentX - sb.startX, sb.currentY - sb.startY);
+          const boxW = Math.abs(sb.currentX - sb.startX);
+          const boxH = Math.abs(sb.currentY - sb.startY);
+
+          if (dragDist < 8) {
+            // 位移小于 8px：判定为单次点击，在五线谱上补加单音
+            addSingleNoteAt(sb.startX, sb.startY);
+          } else if (boxW >= 8 && boxH >= 8) {
+            // 位移显著：执行智能拉框框选与批量自动识音提取！(Request 5)
+            const minX = Math.min(sb.startX, sb.currentX);
+            const maxX = Math.max(sb.startX, sb.currentX);
+            const minY = Math.min(sb.startY, sb.currentY);
+            const maxY = Math.max(sb.startY, sb.currentY);
+            extractNotesFromSelectedRegion(minX, maxX, minY, maxY);
+          }
+          renderOmrCanvas();
         }
       });
 
       // 键盘快捷键微调：按 Delete 键删除音符，按上下键微调
       window.addEventListener('keydown', (e) => {
         if (!STATE.omrData || STATE.omrData.selectedNoteIndex === null) return;
-        // 避免在文本输入框中输入时误触
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
         if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -2822,6 +2848,275 @@
       });
     }
 
+    // 单击空白处补加单个音符
+    function addSingleNoteAt(cx, cy) {
+      if (!STATE.omrData || !STATE.omrData.systems) return;
+      for (let sIdx = 0; sIdx < STATE.omrData.systems.length; sIdx++) {
+        const sys = STATE.omrData.systems[sIdx];
+        if (cy >= sys.topY - sys.d && cy <= sys.bottomY + sys.d) {
+          const d = sys.d;
+          const bottomLineY = sys.lines[4];
+          const step = Math.round((bottomLineY - cy) / (d / 2));
+          
+          const clefMode = document.querySelector('input[name="clefType"]:checked').value;
+          const isTreble = clefMode === 'treble' ? true : (clefMode === 'bass' ? false : (sIdx % 2 === 0));
+          const bottomDiatonic = isTreble ? 2 : 4;
+          const baseOct = isTreble ? 4 : 2;
+          const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
+
+          const totalDiatonic = bottomDiatonic + step;
+          const octOffset = Math.floor(totalDiatonic / 7);
+          const deg = ((totalDiatonic % 7) + 7) % 7;
+          const midi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
+
+          const newNote = {
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            x: Math.round(cx),
+            y: Math.round(bottomLineY - step * (d / 2)),
+            midi,
+            duration: 1,
+            isRest: false,
+            step,
+            sysIdx: sIdx,
+            box: {
+              x: Math.round(cx - d * 0.6),
+              y: Math.round(bottomLineY - step * (d / 2) - d * 0.55),
+              w: Math.round(d * 1.2),
+              h: Math.round(d * 1.1)
+            }
+          };
+
+          STATE.omrData.notes.push(newNote);
+          sortAndSyncOmrNotes(newNote);
+          playOmrPreviewTone(midi);
+          showToast('已在五线谱补加音符', 'success');
+          return;
+        }
+      }
+    }
+
+    // 智能拉框框选区域：自动提取框内所有符头并批量入谱！(Request 5)
+    function extractNotesFromSelectedRegion(minX, maxX, minY, maxY) {
+      if (!STATE.omrData || !STATE.omrData.binary || !STATE.omrData.systems) return;
+
+      const w = STATE.omrData.binaryW;
+      const h = STATE.omrData.binaryH;
+      const bin = STATE.omrData.binary;
+      const systems = STATE.omrData.systems;
+      const clefMode = document.querySelector('input[name="clefType"]:checked').value;
+
+      // 确定框选重叠的谱表
+      const matchedSystems = [];
+      systems.forEach((sys, sIdx) => {
+        if (maxY >= sys.topY - sys.d && minY <= sys.bottomY + sys.d) {
+          matchedSystems.push({ sys, sIdx });
+        }
+      });
+      if (matchedSystems.length === 0) {
+        showToast('框选区域未覆盖五线谱表，请在乐谱范围内拉框', 'info');
+        return;
+      }
+
+      const avgD = matchedSystems[0].sys.d;
+      const rx = Math.max(2, Math.round(avgD * 0.28));
+      const ry = Math.max(2, Math.round(avgD * 0.22));
+
+      // 仅对框选区域做局部高效形态学开运算
+      const bx1 = Math.max(0, Math.floor(minX));
+      const bx2 = Math.min(w - 1, Math.ceil(maxX));
+      const by1 = Math.max(0, Math.floor(minY));
+      const by2 = Math.min(h - 1, Math.ceil(maxY));
+
+      const offsets = [];
+      for (let dy = -ry; dy <= ry; dy++) {
+        for (let dx = -rx; dx <= rx; dx++) {
+          if ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.05) offsets.push([dx, dy]);
+        }
+      }
+
+      // 局部腐蚀
+      const localEroded = new Uint8Array(w * h);
+      for (let y = Math.max(ry, by1); y <= Math.min(h - 1 - ry, by2); y++) {
+        const yW = y * w;
+        for (let x = Math.max(rx, bx1); x <= Math.min(w - 1 - rx, bx2); x++) {
+          if (bin[yW + x] === 0) continue;
+          let ok = true;
+          for (let i = 0; i < offsets.length; i++) {
+            if (bin[(y + offsets[i][1]) * w + (x + offsets[i][0])] !== 1) {
+              ok = false;
+              break;
+            }
+          }
+          if (ok) localEroded[yW + x] = 1;
+        }
+      }
+
+      // 局部膨胀 -> 得到纯符头图
+      const localOpened = new Uint8Array(w * h);
+      for (let y = by1; y <= by2; y++) {
+        const yW = y * w;
+        for (let x = bx1; x <= bx2; x++) {
+          if (localEroded[yW + x] === 1) {
+            for (let i = 0; i < offsets.length; i++) {
+              const nx = x + offsets[i][0];
+              const ny = y + offsets[i][1];
+              if (nx >= bx1 && nx <= bx2 && ny >= by1 && ny <= by2) {
+                localOpened[ny * w + nx] = 1;
+              }
+            }
+          }
+        }
+      }
+
+      // 提取连通域
+      const visited = new Uint8Array(w * h);
+      const candidates = [];
+
+      for (let y = by1; y <= by2; y++) {
+        for (let x = bx1; x <= bx2; x++) {
+          const idx = y * w + x;
+          if (localOpened[idx] === 1 && !visited[idx]) {
+            let q = [[x, y]], area = 0, sumX = 0, sumY = 0;
+            let cMinX = x, cMaxX = x, cMinY = y, cMaxY = y;
+            visited[idx] = 1;
+
+            while (q.length > 0) {
+              const [qx, qy] = q.pop();
+              area++;
+              sumX += qx;
+              sumY += qy;
+              if (qx < cMinX) cMinX = qx;
+              if (qx > cMaxX) cMaxX = qx;
+              if (qy < cMinY) cMinY = qy;
+              if (qy > cMaxY) cMaxY = qy;
+
+              for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+                const nx = qx + dx, ny = qy + dy;
+                if (nx >= bx1 && nx <= bx2 && ny >= by1 && ny <= by2) {
+                  const nIdx = ny * w + nx;
+                  if (localOpened[nIdx] === 1 && !visited[nIdx]) {
+                    visited[nIdx] = 1;
+                    q.push([nx, ny]);
+                  }
+                }
+              }
+            }
+
+            const bw = cMaxX - cMinX + 1;
+            const bh = cMaxY - cMinY + 1;
+            const cx = Math.round(sumX / area);
+            const cy = Math.round(sumY / area);
+
+            // 若宽度过宽(横梁连音符)，进行峰值拆分
+            if (bw >= avgD * 1.6) {
+              const colHist = new Int32Array(bw);
+              for (let sy = cMinY; sy <= cMaxY; sy++) {
+                for (let sx = cMinX; sx <= cMaxX; sx++) {
+                  if (localOpened[sy * w + sx]) colHist[sx - cMinX]++;
+                }
+              }
+              for (let sx = 1; sx < bw - 1; sx++) {
+                if (colHist[sx] >= avgD * 0.4 && colHist[sx] >= colHist[sx - 1] && colHist[sx] >= colHist[sx + 1]) {
+                  candidates.push({ cx: cMinX + sx, cy, bw: Math.round(avgD * 1.1), bh, area: Math.round(area / 2) });
+                }
+              }
+            } else if (bw >= avgD * 0.35 && bw <= avgD * 2.8 && bh >= avgD * 0.35 && bh <= avgD * 2.8 && area >= avgD * avgD * 0.15) {
+              candidates.push({ cx, cy, bw, bh, area });
+            }
+          }
+        }
+      }
+
+      let addedCount = 0;
+      candidates.forEach(cand => {
+        // 查找所属系统
+        let targetSys = null, targetSIdx = 0;
+        for (const m of matchedSystems) {
+          if (cand.cy >= m.sys.topY - m.sys.d && cand.cy <= m.sys.bottomY + m.sys.d) {
+            targetSys = m.sys;
+            targetSIdx = m.sIdx;
+            break;
+          }
+        }
+        if (!targetSys) targetSys = matchedSystems[0].sys, targetSIdx = matchedSystems[0].sIdx;
+
+        const d = targetSys.d;
+        // 避开已有音符
+        const exists = STATE.omrData.notes.some(n => Math.hypot(n.x - cand.cx, n.y - cand.cy) < d * 0.60);
+        if (exists) return;
+
+        const bottomLineY = targetSys.lines[4];
+        const step = Math.round((bottomLineY - cand.cy) / (d / 2));
+        const isTreble = clefMode === 'treble' ? true : (clefMode === 'bass' ? false : (targetSIdx % 2 === 0));
+        const bottomDiatonic = isTreble ? 2 : 4;
+        const baseOct = isTreble ? 4 : 2;
+        const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
+
+        const totalDiatonic = bottomDiatonic + step;
+        const octOffset = Math.floor(totalDiatonic / 7);
+        const deg = ((totalDiatonic % 7) + 7) % 7;
+        const midi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
+
+        const newNote = {
+          id: Date.now() + Math.floor(Math.random() * 10000),
+          x: cand.cx,
+          y: Math.round(bottomLineY - step * (d / 2)),
+          midi,
+          duration: 1,
+          isRest: false,
+          step,
+          sysIdx: targetSIdx,
+          box: {
+            x: Math.round(cand.cx - d * 0.6),
+            y: Math.round(bottomLineY - step * (d / 2) - d * 0.55),
+            w: Math.round(d * 1.2),
+            h: Math.round(d * 1.1)
+          }
+        };
+
+        STATE.omrData.notes.push(newNote);
+        addedCount++;
+      });
+
+      if (addedCount > 0) {
+        sortAndSyncOmrNotes();
+        playOmrPreviewTone(60, 0.25);
+        showToast(`🎯 框选提取成功！已在选区内识别并添加 ${addedCount} 个音符`, 'success');
+      } else {
+        // 若没有新提取到音符，检查框内是否有已有音符，将其高亮选中
+        const inBoxIdx = STATE.omrData.notes.findIndex(n => n.x >= minX && n.x <= maxX && n.y >= minY && n.y <= maxY);
+        if (inBoxIdx !== -1) {
+          STATE.omrData.selectedNoteIndex = inBoxIdx;
+          updateOmrToolbarBadge();
+          showToast(`已选中框内第 #${inBoxIdx + 1} 个音符`, 'info');
+        } else {
+          showToast('框选区域内未检测到明显符头，可尝试缩小或单点补音', 'info');
+        }
+      }
+    }
+
+    // 音符数组排序与全局简谱同步
+    function sortAndSyncOmrNotes(focusNote = null) {
+      STATE.omrData.notes.sort((a, b) => {
+        if (a.sysIdx !== b.sysIdx) return a.sysIdx - b.sysIdx;
+        return a.x - b.x;
+      });
+      if (focusNote) {
+        STATE.omrData.selectedNoteIndex = STATE.omrData.notes.indexOf(focusNote);
+      } else if (STATE.omrData.selectedNoteIndex === null && STATE.omrData.notes.length > 0) {
+        STATE.omrData.selectedNoteIndex = 0;
+      }
+      STATE.notes = STATE.omrData.notes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
+      const badgeCountEl = document.getElementById('centerOmrBadgeCount');
+      if (badgeCountEl) {
+        badgeCountEl.textContent = `${STATE.omrData.notes.length}音`;
+        badgeCountEl.classList.remove('hidden');
+      }
+      updateOmrToolbarBadge();
+      renderOmrCanvas();
+      renderJianpuScore();
+      syncRawTextFromNotes();
+    }
     // 交互工具栏状态更新
     function updateOmrToolbarBadge() {
       const badge = document.getElementById('omrSelectedNoteBadge');
