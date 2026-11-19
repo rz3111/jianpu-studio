@@ -1340,17 +1340,24 @@
       const statusEl = document.getElementById('engineStatusIndicator');
       if (statusEl) statusEl.textContent = `全曲分析中 (0/${Math.round(totalDurationSec)}s)...`;
 
-      // 全局平均能量计算 (采用步长采样优化)
-      let totalRms = 0;
-      let frameCount = 0;
+      // 1. 前置滤波预处理 (Pre-emphasis 预加重高通滤波，消除麦克风直流偏置与低频喷麦底噪)
+      const filteredData = new Float32Array(maxSamples);
+      filteredData[0] = channelData[0];
+      for (let i = 1; i < maxSamples; i++) {
+        filteredData[i] = channelData[i] - 0.95 * channelData[i - 1];
+      }
+
+      // 2. 自适应噪声门限与分位底噪测算 (借鉴 Spotify Basic Pitch 噪声能量门控)
+      const frameEnergies = [];
       for (let i = 0; i + frameSize < maxSamples; i += hopSize * 2) {
         let sumSq = 0;
         for (let j = 0; j < frameSize; j += 2) sumSq += channelData[i + j] * channelData[i + j];
-        totalRms += Math.sqrt((sumSq * 2) / frameSize);
-        frameCount++;
+        frameEnergies.push(Math.sqrt((sumSq * 2) / frameSize));
       }
-      const avgRms = totalRms / (frameCount || 1);
-      const silenceThreshold = Math.max(0.005, avgRms * 0.16);
+      frameEnergies.sort((a, b) => a - b);
+      const noiseFloor = frameEnergies[Math.floor(frameEnergies.length * 0.15)] || 0.002;
+      const medianEnergy = frameEnergies[Math.floor(frameEnergies.length * 0.5)] || 0.02;
+      const silenceThreshold = Math.max(0.006, noiseFloor * 2.6, medianEnergy * 0.14);
 
       const onsetSensVal = document.getElementById('selectOnsetSens').value;
       const onsetFactor = onsetSensVal === 'high' ? 1.18 : (onsetSensVal === 'low' ? 1.42 : 1.28);
@@ -1362,6 +1369,7 @@
 
       for (let i = 0; i + frameSize < maxSamples; i += hopSize) {
         const slice = channelData.subarray(i, i + frameSize);
+        const filtSlice = filteredData.subarray(i, i + frameSize);
         let sumSq = 0;
         for (let j = 0; j < frameSize; j += 2) sumSq += slice[j] * slice[j];
         const rms = Math.sqrt((sumSq * 2) / frameSize);
@@ -1379,7 +1387,7 @@
           frames.push({ midi: -1, rawMidi: -1, time, clarity: 0, isOnset });
         } else {
           const prevDetectedMidi = frames.length > 0 && frames[frames.length - 1].midi > 0 ? frames[frames.length - 1].midi : -1;
-          const { freq, clarity, rawMidi: preciseMidi } = detectPitchYIN(slice, sampleRate, prevDetectedMidi);
+          const { freq, clarity, rawMidi: preciseMidi } = detectPitchYIN(filtSlice, sampleRate, prevDetectedMidi);
           if (freq > 70 && freq < 1000 && clarity > 0.45) {
             const rawMidi = 69 + 12 * Math.log2(freq / 440);
             const snappedMidi = snapPitchToScale(rawMidi, STATE.key, STATE.scaleMode);
@@ -1451,22 +1459,41 @@
         }
       }
 
-      // 6. 过滤超短杂音 (< 75ms) 并精准量化到节拍网格
+      // 6. 智能音乐节拍分级量化 (支持附点、切分音与整洁休止符合并)
       const secPerBeat = 60 / STATE.bpm;
       const quantizedNotes = [];
 
+      // 乐理常用节拍细分集合: 0.25 (16分), 0.5 (8分), 0.75 (附点8分), 1.0 (4分), 1.5 (附点4分), 2.0 (2分), 3.0 (附点2分), 4.0 (全音符)
+      const standardBeats = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0];
+
       for (const ev of rawEvents) {
-        if (ev.durSec < 0.075) continue;
-        let beats = ev.durSec / secPerBeat;
-        beats = Math.max(STATE.quantGrid, Math.round(beats / STATE.quantGrid) * STATE.quantGrid);
-        beats = Math.min(4, beats);
+        if (ev.durSec < 0.08) continue;
+        const rawBeats = ev.durSec / secPerBeat;
+
+        // 寻找最邻近的标准乐理时值
+        let bestBeats = 1.0;
+        let minDiff = Infinity;
+        for (const sb of standardBeats) {
+          const diff = Math.abs(rawBeats - sb);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestBeats = sb;
+          }
+        }
+        if (bestBeats < STATE.quantGrid) bestBeats = STATE.quantGrid;
 
         if (ev.midi === -1) {
-          if (quantizedNotes.length > 0 && beats >= 0.5) {
-            quantizedNotes.push({ midi: 0, duration: beats, isRest: true });
+          // 静音休止符处理 (合并过细休止符)
+          if (quantizedNotes.length > 0 && bestBeats >= 0.5) {
+            const lastNote = quantizedNotes[quantizedNotes.length - 1];
+            if (lastNote.isRest) {
+              lastNote.duration = Math.min(4, lastNote.duration + bestBeats);
+            } else {
+              quantizedNotes.push({ midi: 0, duration: bestBeats, isRest: true });
+            }
           }
         } else {
-          quantizedNotes.push({ midi: ev.midi, duration: beats, isRest: false });
+          quantizedNotes.push({ midi: ev.midi, duration: bestBeats, isRest: false });
         }
       }
 
@@ -1753,13 +1780,13 @@
       ctx.fillRect(0, 0, offCanvas.width, offCanvas.height);
       ctx.drawImage(img, 0, 0, offCanvas.width, offCanvas.height);
 
-      const w = offCanvas.width;
-      const h = offCanvas.height;
-      const imgData = ctx.getImageData(0, 0, w, h).data;
+      let w = offCanvas.width;
+      let h = offCanvas.height;
+      let imgData = ctx.getImageData(0, 0, w, h).data;
 
-      // 1. Otsu 动态大津二值化 (自适应不同光照与背景的乐谱)
+      // 1. Otsu 动态大津二值化
       const hist = new Int32Array(256);
-      const gray = new Uint8Array(w * h);
+      let gray = new Uint8Array(w * h);
 
       for (let i = 0; i < w * h; i++) {
         const idx = i * 4;
@@ -1788,6 +1815,73 @@
         }
       }
       otsuThreshold = Math.max(120, Math.min(185, otsuThreshold));
+
+      // ======================================================================
+      // 2. 智能倾斜检测与自动扶正 (Deskewing 借鉴 Audiveris 投影方差极大值法)
+      // ======================================================================
+      let detectedTiltAngle = 0;
+      const cx = w / 2;
+      const cy = h / 2;
+      const samplePoints = [];
+      const stepX = 4, stepY = 2;
+
+      for (let y = 0; y < h; y += stepY) {
+        for (let x = 0; x < w; x += stepX) {
+          if (gray[y * w + x] < otsuThreshold) {
+            samplePoints.push(x, y);
+          }
+        }
+      }
+
+      if (samplePoints.length > 200) {
+        let maxProjVar = -1;
+        // 在 -6.0° 到 +6.0° 范围内以 0.5° 步长搜寻水平五线谱对齐角
+        for (let candDeg = -6.0; candDeg <= 6.0; candDeg += 0.5) {
+          const tanT = Math.tan(candDeg * Math.PI / 180);
+          const profile = new Int32Array(h);
+          for (let p = 0; p < samplePoints.length; p += 2) {
+            const px = samplePoints[p];
+            const py = samplePoints[p + 1];
+            const yp = Math.round(py - (px - cx) * tanT);
+            if (yp >= 0 && yp < h) profile[yp]++;
+          }
+
+          let pSum = 0, pSumSq = 0;
+          for (let y = 0; y < h; y++) {
+            const v = profile[y];
+            pSum += v;
+            pSumSq += v * v;
+          }
+          const pVar = pSumSq - (pSum * pSum) / h;
+          if (pVar > maxProjVar) {
+            maxProjVar = pVar;
+            detectedTiltAngle = candDeg;
+          }
+        }
+      }
+
+      // 如果倾斜大于等于 0.4°，应用高质双缓冲旋转扶正
+      if (Math.abs(detectedTiltAngle) >= 0.4) {
+        const rotCanvas = document.createElement('canvas');
+        rotCanvas.width = w;
+        rotCanvas.height = h;
+        const rctx = rotCanvas.getContext('2d');
+        rctx.fillStyle = '#ffffff';
+        rctx.fillRect(0, 0, w, h);
+        rctx.translate(cx, cy);
+        rctx.rotate(-detectedTiltAngle * Math.PI / 180);
+        rctx.translate(-cx, -cy);
+        rctx.drawImage(offCanvas, 0, 0);
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(rotCanvas, 0, 0);
+
+        imgData = ctx.getImageData(0, 0, w, h).data;
+        for (let i = 0; i < w * h; i++) {
+          const idx = i * 4;
+          gray[i] = Math.round(0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2]);
+        }
+      }
 
       const binary = new Uint8Array(w * h);
       const rowHist = new Int32Array(h);
@@ -1983,8 +2077,11 @@
         return;
       }
 
+      const tiltInfo = Math.abs(detectedTiltAngle) >= 0.4
+        ? `📐 已自动校正倾斜: ${detectedTiltAngle > 0 ? '+' : ''}${detectedTiltAngle.toFixed(1)}° (Audiveris Deskew)`
+        : `📐 谱面水平度良好 (倾斜 < 0.4°)`;
       document.getElementById('omrStatsBadge').innerHTML =
-        `<span>✅ 识别完成：检测到 ${staffSystems.length} 组五线谱，共提取 ${detectedNotes.length} 个音符</span>`;
+        `<span>✅ 识别完成：${tiltInfo} | 检测到 ${staffSystems.length} 组五线谱表，共提取 ${detectedNotes.length} 个音符</span>`;
 
       STATE.notes = detectedNotes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
       updateHeaderLabels();
