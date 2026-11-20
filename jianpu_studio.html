@@ -754,7 +754,8 @@
                 <button onclick="omrAdjustDiatonic(1)" title="向上移动一个音级 (如 1->2)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 text-xs font-semibold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">↑ 高一度</button>
                 <button onclick="omrAdjustDiatonic(-1)" title="向下移动一个音级 (如 2->1)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 text-xs font-semibold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">↓ 低一度</button>
                 <button onclick="omrCycleDuration()" title="切换时值 (全/二分/四分/八分)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-emerald-700 text-xs font-semibold rounded-xl border border-slate-200/80 cursor-pointer shadow-2xs transition whitespace-nowrap">♩ 切换时值</button>
-                <button onclick="omrDeleteSelectedNote()" title="删除误识别音符" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-xl border border-rose-200 cursor-pointer shadow-2xs transition whitespace-nowrap">🗑️ 删除此音</button>
+                <button onclick="omrDeleteSelectedNote()" title="删除当前音符" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-xl border border-rose-200 cursor-pointer shadow-2xs transition whitespace-nowrap">🗑️ 删除此音</button>
+                <button id="omrDeleteBatchBtn" onclick="omrDeleteSelectedNotes()" title="批量删除框选的音符" class="hidden px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl border border-rose-600 cursor-pointer shadow-2xs transition whitespace-nowrap">🗑️ 删除所选 (<span id="omrSelectedCount">0</span>)</button>
               </div>
             </div>
 
@@ -1155,7 +1156,8 @@
       omrData: null,          // 五线谱分析结果
       pitchContourData: null, // 音高与音符时序，用于 Piano Roll 绘制
       previewZoom: 1.0,       // 大图预览缩放倍率
-      currentPreviewType: null // 当前大图预览类型: 'waveform' | 'pitch' | 'omr'
+      currentPreviewType: null, // 当前大图预览类型: 'waveform' | 'pitch' | 'omr'
+      analysisRunId: 0          // 用于取消已经过时的长音频分析任务
     };
 
     // 各大调基准 MIDI (C4 = 60)
@@ -1519,13 +1521,17 @@
      * 高精度多候选音高检测算法 (借鉴国际开源音频项目 pYIN / Aubio / Basic Pitch)
      * 核心特性：多候选极小值检出 + 次谐波校验 (Sub-harmonic Verification) + 八度跳变抑制
      */
-    function detectPitchYIN(buffer, sampleRate, prevMidi = -1) {
+    /**
+     * 高精度多候选音高检测算法 (Multi-Candidate YIN + Parabolic Interpolation)
+     * 每帧保留 3~5 个候选音高，为后续全局动态规划/Viterbi 算法提供充分的候选状态空间
+     */
+    function detectPitchYINCandidates(buffer, sampleRate, energy = 0.1) {
       const halfLen = Math.floor(buffer.length / 2);
       const minTau = Math.max(2, Math.floor(sampleRate / 1050)); // ~C6 (1046Hz)
       const maxTau = Math.min(halfLen - 2, Math.floor(sampleRate / 68));  // ~C2 (65Hz)
       const yinBuffer = new Float32Array(maxTau + 2);
 
-      // 1. 平方差函数 (加速步长计算)
+      // 1. 平方差函数 (步长为 2 采样，降低 50% 计算量，避免 O(N^2) 耗时)
       for (let tau = 0; tau <= maxTau + 1; tau++) {
         let sum = 0;
         for (let i = 0; i < halfLen; i += 2) {
@@ -1543,16 +1549,15 @@
         yinBuffer[tau] *= tau / (runningSum || 1);
       }
 
-      // 3. 多候选极值检出 (搜集所有局部谷底候选 tau)
+      // 3. 多候选局部谷底检索
       const candidates = [];
       for (let tau = minTau; tau <= maxTau; tau++) {
-        if (yinBuffer[tau] < 0.48 && 
+        if (yinBuffer[tau] < 0.65 && 
             (tau === minTau || yinBuffer[tau] <= yinBuffer[tau - 1]) && 
             (tau === maxTau || yinBuffer[tau] <= yinBuffer[tau + 1])) {
           
-          // 局部抛物线插值提高精度
           let betterTau = tau;
-          if (tau > 0 && tau < maxTau) {
+          if (tau > minTau && tau < maxTau) {
             const s0 = yinBuffer[tau - 1];
             const s1 = yinBuffer[tau];
             const s2 = yinBuffer[tau + 1];
@@ -1563,29 +1568,44 @@
           }
           const freq = sampleRate / betterTau;
           const midi = 69 + 12 * Math.log2(freq / 440);
-          candidates.push({ tau: betterTau, cmndf: yinBuffer[tau], freq, midi });
+          const cmndf = Math.max(0, Math.min(1, yinBuffer[tau]));
+          const clarity = Math.max(0, Math.min(1, 1 - cmndf));
+          candidates.push({ tau: betterTau, freq, midi, cmndf, clarity, energy });
         }
       }
 
-      if (candidates.length === 0) return { freq: -1, clarity: 0 };
+      // 补充可能的高八度 / 次谐波候选
+      if (candidates.length > 0) {
+        const bestTau = candidates[0].tau;
+        const halfTau = Math.round(bestTau / 2);
+        if (halfTau >= minTau && halfTau <= maxTau) {
+          const fHalf = sampleRate / halfTau;
+          candidates.push({
+            tau: halfTau,
+            freq: fHalf,
+            midi: 69 + 12 * Math.log2(fHalf / 440),
+            cmndf: yinBuffer[halfTau] || 0.5,
+            clarity: Math.max(0, 1 - (yinBuffer[halfTau] || 0.5)),
+            energy
+          });
+        }
+      }
 
-      // 按谷底深度排序
       candidates.sort((a, b) => a.cmndf - b.cmndf);
+      return candidates.slice(0, 5);
+    }
 
-      // 4. 次谐波与八度抑制逻辑 (防止人声共振峰引起的八度过低或过高错误)
+    /**
+     * 单帧兼容版本 (供即时试听与回退使用)
+     */
+    function detectPitchYIN(buffer, sampleRate, prevMidi = -1) {
+      let sumSq = 0;
+      for (let j = 0; j < buffer.length; j += 2) sumSq += buffer[j] * buffer[j];
+      const energy = Math.sqrt((sumSq * 2) / buffer.length);
+      const candidates = detectPitchYINCandidates(buffer, sampleRate, energy);
+      if (candidates.length === 0) return { freq: -1, clarity: 0, rawMidi: -1, candidates: [] };
+
       let best = candidates[0];
-
-      // 检查是否存在较高频的真基频 (避免把双倍周期当成基频，即避免八度偏低)
-      for (let i = 1; i < candidates.length; i++) {
-        const cand = candidates[i];
-        // 如果候选周期大约是最佳周期的一半 (即高八度)，且其差值也很小 (<0.22)
-        if (cand.tau < best.tau * 0.6 && cand.cmndf < 0.22) {
-          best = cand;
-          break;
-        }
-      }
-
-      // 若有上一帧连续音高作为上下文参考，优先选择与前帧连续平滑的候选
       if (prevMidi > 0) {
         for (const cand of candidates) {
           if (Math.abs(cand.midi - prevMidi) <= 2.2 && cand.cmndf < 0.35) {
@@ -1594,15 +1614,117 @@
           }
         }
       }
-
-      const clarity = Math.max(0, Math.min(1, 1 - best.cmndf));
-      return { freq: best.freq, clarity, rawMidi: best.midi };
+      return { freq: best.freq, clarity: best.clarity, rawMidi: best.midi, candidates };
     }
 
     /**
-     * 智能调式吸附函数 (Scale Snapping)
-     * 将微弱偏音/颤音吸附到当前调式，避免跑调生成混乱的升降号
+     * 全局动态规划 / Viterbi 音高路径追踪器
+     * 解决八度跳跃、瞬时锁死、发声/静音切换等全局最优化问题
      */
+    function viterbiPitchTracking(framesData, silenceThreshold = 0.01) {
+      const T = framesData.length;
+      if (T === 0) return [];
+
+      const dp = [];
+      const bp = [];
+
+      for (let t = 0; t < T; t++) {
+        const frame = framesData[t];
+        const cands = frame.candidates || [];
+        const numStates = 1 + cands.length; // State 0 is unvoiced (-1)
+        dp[t] = new Float32Array(numStates);
+        bp[t] = new Int32Array(numStates);
+
+        const energy = frame.energy || 0;
+        const isSilent = energy < silenceThreshold;
+
+        for (let s = 0; s < numStates; s++) {
+          // 发射代价
+          let emissionCost = 0;
+          if (s === 0) {
+            emissionCost = isSilent ? (energy / silenceThreshold) * 0.15 : 2.6 + (energy / silenceThreshold) * 1.5;
+          } else {
+            const cand = cands[s - 1];
+            emissionCost = (1 - cand.clarity) * 1.8 + cand.cmndf * 1.2;
+            if (isSilent) emissionCost += 3.5;
+          }
+
+          if (t === 0) {
+            dp[t][s] = emissionCost;
+          } else {
+            const prevCands = framesData[t - 1].candidates || [];
+            const prevStates = 1 + prevCands.length;
+            let minTotalCost = Infinity;
+            let bestPrevState = 0;
+
+            for (let p = 0; p < prevStates; p++) {
+              let transCost = 0;
+              if (p === 0 && s === 0) {
+                transCost = 0;
+              } else if (p === 0 || s === 0) {
+                transCost = 1.15; // 静音/有声切换惩罚
+              } else {
+                const prevCand = prevCands[p - 1];
+                const currCand = cands[s - 1];
+                const deltaMidi = Math.abs(currCand.midi - prevCand.midi);
+
+                // 平滑过渡代价
+                transCost = deltaMidi * 0.12;
+
+                // 八度跳变惩罚 (抑制谐波共振峰引起的虚假八度)
+                if (Math.abs(deltaMidi - 12) < 1.2 || Math.abs(deltaMidi - 24) < 1.2) {
+                  transCost += 2.8;
+                } else if (deltaMidi > 12) {
+                  // 超过 12 半音连续跳跃增加惩罚，但不绝对禁止
+                  transCost += (deltaMidi - 12) * 0.35;
+                } else if (deltaMidi <= 0.8) {
+                  // 颤音正常波动极低代价
+                  transCost = deltaMidi * 0.02;
+                }
+              }
+
+              const totalCost = dp[t - 1][p] + transCost;
+              if (totalCost < minTotalCost) {
+                minTotalCost = totalCost;
+                bestPrevState = p;
+              }
+            }
+
+            dp[t][s] = minTotalCost + emissionCost;
+            bp[t][s] = bestPrevState;
+          }
+        }
+      }
+
+      // 回溯最佳全局路径
+      let bestFinalState = 0;
+      let minFinalCost = Infinity;
+      for (let s = 0; s < dp[T - 1].length; s++) {
+        if (dp[T - 1][s] < minFinalCost) {
+          minFinalCost = dp[T - 1][s];
+          bestFinalState = s;
+        }
+      }
+
+      const path = new Array(T);
+      let curState = bestFinalState;
+      for (let t = T - 1; t >= 0; t--) {
+        if (curState === 0) {
+          path[t] = { midi: -1, rawMidi: -1, freq: -1, clarity: 0 };
+        } else {
+          const cand = framesData[t].candidates[curState - 1];
+          path[t] = {
+            midi: Math.round(cand.midi),
+            rawMidi: cand.midi,
+            freq: cand.freq,
+            clarity: cand.clarity
+          };
+        }
+        curState = bp[t][curState];
+      }
+      return path;
+    }
+
     function snapPitchToScale(rawMidi, key, mode = 'major') {
       if (rawMidi <= 0) return -1;
       if (mode === 'chromatic') return Math.round(rawMidi);
@@ -1624,27 +1746,21 @@
         return midiRound;
       }
 
-      // 寻找最近的调内音
+      // 在相邻八度生成所有调内候选，真正比较 rawMidi 的距离。
       let minDiff = Infinity;
       let bestSnappedMidi = midiRound;
-
-      for (const scaleRel of activeScale) {
-        const diff = Math.abs(rawMidi - (Math.floor(rawMidi / 12) * 12 + (root + scaleRel) % 12));
-        if (diff < minDiff) {
-          minDiff = diff;
+      const octave = Math.floor(midiRound / 12);
+      for (let oct = octave - 1; oct <= octave + 1; oct++) {
+        for (const scaleRel of activeScale) {
+          const target = oct * 12 + ((root + scaleRel) % 12);
+          const diff = Math.abs(rawMidi - target);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestSnappedMidi = target;
+          }
         }
       }
-
-      // 歌唱误差在 0.45 个半音之内时，吸附到调内音阶
-      for (let offset = -1; offset <= 1; offset++) {
-        const targetClass = ((pitchClass + offset) % 12 + 12) % 12;
-        const targetRel = (targetClass - root + 12) % 12;
-        if (activeScale.includes(targetRel)) {
-          return midiRound + offset;
-        }
-      }
-
-      return midiRound;
+      return minDiff <= 0.45 ? bestSnappedMidi : midiRound;
     }
 
     /**
@@ -1692,21 +1808,26 @@
     async function runAudioTranscription() {
       const audioBuffer = STATE.currentAudioBuffer;
       if (!audioBuffer) return;
+      const runId = ++STATE.analysisRunId;
 
       const sampleRate = audioBuffer.sampleRate;
-      const channelData = audioBuffer.getChannelData(0);
+      // 立体声统一混音为单声道
+      const left = audioBuffer.getChannelData(0);
+      const right = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : null;
+      const channelData = right
+        ? Float32Array.from(left, (v, i) => (v + right[i]) * 0.5)
+        : left;
 
       // 支持解析完整音频时长（无截断，最大支持 10 分钟）
       const maxSamples = Math.min(channelData.length, sampleRate * 600);
       const totalDurationSec = (maxSamples / sampleRate).toFixed(1);
       const frameSize = 2048;
       const hopSize = 512; // ~11.6ms，高时间分辨率兼具高速分析
-      const frames = [];
 
       const statusEl = document.getElementById('engineStatusIndicator');
       if (statusEl) statusEl.textContent = `全曲分析中 (0/${Math.round(totalDurationSec)}s)...`;
 
-      // 1. 前置滤波预处理 (Pre-emphasis 预加重高通滤波，消除麦克风直流偏置与低频喷麦底噪)
+      // 1. 前置滤波预处理 (Pre-emphasis 预加重高通滤波，消除低频喷麦底噪与麦克风直流偏置)
       const filteredData = new Float32Array(maxSamples);
       filteredData[0] = channelData[0];
       for (let i = 1; i < maxSamples; i++) {
@@ -1725,47 +1846,62 @@
       const medianEnergy = frameEnergies[Math.floor(frameEnergies.length * 0.5)] || 0.02;
       const silenceThreshold = Math.max(0.006, noiseFloor * 2.6, medianEnergy * 0.14);
 
-      const onsetSensVal = document.getElementById('selectOnsetSens').value;
+      const onsetSensVal = document.getElementById('selectOnsetSens')?.value || 'medium';
       const onsetFactor = onsetSensVal === 'high' ? 1.18 : (onsetSensVal === 'low' ? 1.42 : 1.28);
 
-      // 1. 逐帧异步提取音高、能量与可信度 (带进度反馈与防卡死出让)
+      // 3. 逐帧异步提取多候选音高、能量与复合起音特征
       let prevRms = 0;
-      const onsetTimes = [];
-      let processedCount = 0;
+      let prevHfRms = 0;
+      let lastOnsetTime = -1;
+      let lastProgressUpdate = Date.now();
+      const rawFrames = [];
 
       for (let i = 0; i + frameSize < maxSamples; i += hopSize) {
+        if (runId !== STATE.analysisRunId) return;
+
         const slice = channelData.subarray(i, i + frameSize);
         const filtSlice = filteredData.subarray(i, i + frameSize);
         let sumSq = 0;
-        for (let j = 0; j < frameSize; j += 2) sumSq += slice[j] * slice[j];
+        let filtSumSq = 0;
+        for (let j = 0; j < frameSize; j += 2) {
+          sumSq += slice[j] * slice[j];
+          filtSumSq += filtSlice[j] * filtSlice[j];
+        }
         const rms = Math.sqrt((sumSq * 2) / frameSize);
+        const hfRms = Math.sqrt((filtSumSq * 2) / frameSize);
         const time = i / sampleRate;
 
-        // 检测起音 (能量骤升即新音符触发)
-        let isOnset = false;
-        if (rms > silenceThreshold && rms > prevRms * onsetFactor && prevRms > 0.001) {
-          isOnset = true;
-          onsetTimes.push(time);
-        }
+        // 提取每帧 3~5 个候选音高
+        const candidates = rms >= silenceThreshold ? detectPitchYINCandidates(filtSlice, sampleRate, rms) : [];
+
+        // 复合起音特征：能量骤升 + 频谱高频通量 (Spectral Flux)
+        const energyDelta = Math.max(0, rms - prevRms);
+        const hfDelta = Math.max(0, hfRms - prevHfRms);
+        const isEnergyOnset = rms > silenceThreshold && rms > prevRms * onsetFactor && prevRms > 0.001;
+        const isFluxOnset = hfRms > prevHfRms * (onsetFactor * 1.08) && rms > silenceThreshold * 1.2;
+        
+        // 起音冷却保护 (至少 80ms)
+        const cooldownOk = (time - lastOnsetTime) >= 0.08;
+        const candidateOnset = cooldownOk && (isEnergyOnset || isFluxOnset);
+
+        rawFrames.push({
+          time,
+          rms,
+          energy: rms,
+          hfRms,
+          energyDelta,
+          hfDelta,
+          candidateOnset,
+          candidates
+        });
+
         prevRms = rms;
+        prevHfRms = hfRms;
 
-        if (rms < silenceThreshold) {
-          frames.push({ midi: -1, rawMidi: -1, time, clarity: 0, isOnset });
-        } else {
-          const prevDetectedMidi = frames.length > 0 && frames[frames.length - 1].midi > 0 ? frames[frames.length - 1].midi : -1;
-          const { freq, clarity, rawMidi: preciseMidi } = detectPitchYIN(filtSlice, sampleRate, prevDetectedMidi);
-          if (freq > 70 && freq < 1000 && clarity > 0.45) {
-            const rawMidi = 69 + 12 * Math.log2(freq / 440);
-            const snappedMidi = snapPitchToScale(rawMidi, STATE.key, STATE.scaleMode);
-            frames.push({ midi: snappedMidi, rawMidi, time, clarity, isOnset });
-          } else {
-            frames.push({ midi: -1, rawMidi: -1, time, clarity: 0, isOnset });
-          }
-        }
-
-        processedCount++;
-        // 每 400 帧出让一次控制权，避免长时间任务卡顿主线程并实时更新进度
-        if (processedCount % 400 === 0) {
+        // 节流进度刷新 (每 120ms 一次，避免高频 DOM 回流与卡顿)
+        const now = Date.now();
+        if (now - lastProgressUpdate >= 120) {
+          lastProgressUpdate = now;
           const curSec = Math.round(time);
           const pct = Math.round((time / (maxSamples / sampleRate)) * 100);
           if (statusEl) statusEl.textContent = `全曲识别中 ${pct}% (${curSec}s/${Math.round(totalDurationSec)}s)...`;
@@ -1775,92 +1911,204 @@
 
       if (statusEl) statusEl.textContent = 'AI 音律分析引擎已就绪';
 
-      // 2. 7-frame 窗口中值滤波 (消除瞬时偶发毛刺)
-      const smoothed = frames.map((f, idx) => {
-        if (idx < 3 || idx >= frames.length - 3) return { ...f };
+      // 4. 全局动态规划 / Viterbi 最优音高路径解码
+      const decodedPath = viterbiPitchTracking(rawFrames, silenceThreshold);
+
+      // 5. 2~3 帧确认与音高突变起音加固 (过滤辅音、呼吸声与瞬时爆破杂音)
+      const onsetTimes = [];
+      const confirmedFrames = [];
+
+      for (let idx = 0; idx < rawFrames.length; idx++) {
+        const rf = rawFrames[idx];
+        const dec = decodedPath[idx];
+        let isOnset = false;
+
+        if (rf.candidateOnset) {
+          // 连续 2~3 帧持续发声确认
+          const hasSustain = (idx + 1 < rawFrames.length && rawFrames[idx + 1].rms >= silenceThreshold * 0.8) &&
+                             (idx + 2 < rawFrames.length && rawFrames[idx + 2].rms >= silenceThreshold * 0.7);
+          if (hasSustain) {
+            isOnset = true;
+            lastOnsetTime = rf.time;
+            onsetTimes.push(rf.time);
+          }
+        }
+
+        // 音高突变触发起音 (跨度 >= 1.75 个半音，即使连音也能精准拆解为新音符)
+        if (!isOnset && idx > 0 && dec.midi > 0 && decodedPath[idx - 1].midi > 0) {
+          const pitchDiff = Math.abs(dec.midi - decodedPath[idx - 1].midi);
+          if (pitchDiff >= 1.75 && (rf.time - lastOnsetTime) >= 0.08) {
+            isOnset = true;
+            lastOnsetTime = rf.time;
+            onsetTimes.push(rf.time);
+          }
+        }
+
+        confirmedFrames.push({
+          time: rf.time,
+          midi: dec.midi,
+          rawMidi: dec.rawMidi,
+          clarity: dec.clarity,
+          isOnset
+        });
+      }
+
+      // 6. 音高平滑 (静音帧 -1 绝不参与中值滤波，有声/无声状态独立维护)
+      const smoothed = confirmedFrames.map((f, idx) => {
+        if (f.midi <= 0 || idx < 2 || idx >= confirmedFrames.length - 2) return { ...f };
         const window = [
-          frames[idx - 3].midi, frames[idx - 2].midi, frames[idx - 1].midi,
+          confirmedFrames[idx - 2].midi,
+          confirmedFrames[idx - 1].midi,
           f.midi,
-          frames[idx + 1].midi, frames[idx + 2].midi, frames[idx + 3].midi
-        ].sort((a, b) => a - b);
-        return { ...f, midi: window[3] };
+          confirmedFrames[idx + 1].midi,
+          confirmedFrames[idx + 2].midi
+        ].filter(m => m > 0).sort((a, b) => a - b);
+        if (window.length < 3) return { ...f };
+        return { ...f, midi: window[Math.floor(window.length / 2)] };
       });
 
-      // 3. 八度跳变自相关纠错 (Octave-error repair pass)
+      // 短暂微小静音填补 (限制 <= 3 帧约 35ms，且前后音高一致；前后音不同则不合并)
       for (let i = 1; i < smoothed.length - 1; i++) {
-        const prev = smoothed[i - 1].midi;
-        const curr = smoothed[i].midi;
-        const next = smoothed[i + 1].midi;
-        if (prev > 0 && curr > 0 && next > 0) {
-          if (Math.abs(curr - prev) >= 11 && Math.abs(curr - prev) <= 13 && Math.abs(prev - next) <= 3) {
-            smoothed[i].midi = prev;
+        if (smoothed[i].midi === -1 && smoothed[i - 1].midi > 0 && smoothed[i + 1].midi > 0) {
+          if (Math.abs(smoothed[i - 1].midi - smoothed[i + 1].midi) <= 0.8) {
+            smoothed[i].midi = smoothed[i - 1].midi;
+            smoothed[i].rawMidi = smoothed[i - 1].rawMidi;
+            smoothed[i].clarity = (smoothed[i - 1].clarity + smoothed[i + 1].clarity) * 0.5;
           }
         }
       }
 
-      // 4. 短暂静音空洞填补 (Gap-bridging: <60ms 的短暂微停顿合并为持续音)
-      for (let i = 1; i < smoothed.length - 1; i++) {
-        if (smoothed[i].midi === -1 && smoothed[i - 1].midi > 0 && smoothed[i + 1].midi === smoothed[i - 1].midi) {
-          smoothed[i].midi = smoothed[i - 1].midi;
+      // 7. 统一节拍网格量化 (Beat Grid Quantization)
+      // 估计 BPM: 从相邻起音间隔 IOI 测算
+      if (onsetTimes.length >= 4 && document.getElementById('selectKey')?.value === 'AUTO') {
+        const iois = [];
+        for (let i = 1; i < onsetTimes.length; i++) {
+          const dt = onsetTimes[i] - onsetTimes[i - 1];
+          if (dt >= 0.18 && dt <= 1.8) iois.push(dt);
         }
-      }
-
-      // 5. 音符分段 (结合起音 Onset 与音高变化)
-      const rawEvents = [];
-      const frameDur = hopSize / sampleRate;
-
-      for (let idx = 0; idx < smoothed.length; idx++) {
-        const f = smoothed[idx];
-        if (rawEvents.length === 0) {
-          rawEvents.push({ midi: f.midi, durSec: frameDur });
-        } else {
-          const last = rawEvents[rawEvents.length - 1];
-          if (last.midi === f.midi && !f.isOnset) {
-            last.durSec += frameDur;
-          } else if (last.midi === f.midi && f.isOnset && last.durSec >= 0.18) {
-            rawEvents.push({ midi: f.midi, durSec: frameDur });
-          } else {
-            rawEvents.push({ midi: f.midi, durSec: frameDur });
+        if (iois.length >= 3) {
+          iois.sort((a, b) => a - b);
+          const medianIoi = iois[Math.floor(iois.length / 2)];
+          let estBpm = Math.round(60 / medianIoi);
+          while (estBpm < 68) estBpm *= 2;
+          while (estBpm > 165) estBpm = Math.round(estBpm / 2);
+          if (estBpm >= 60 && estBpm <= 180) {
+            STATE.bpm = estBpm;
+            const bpmInput = document.getElementById('inputBpm');
+            if (bpmInput) bpmInput.value = estBpm;
           }
         }
       }
 
-      // 6. 智能音乐节拍分级量化 (支持附点、切分音与整洁休止符合并)
       const secPerBeat = 60 / STATE.bpm;
-      const quantizedNotes = [];
+      const gridStepSec = secPerBeat * STATE.quantGrid;
 
-      // 乐理常用节拍细分集合: 0.25 (16分), 0.5 (8分), 0.75 (附点8分), 1.0 (4分), 1.5 (附点4分), 2.0 (2分), 3.0 (附点2分), 4.0 (全音符)
-      const standardBeats = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0];
+      // 提取音符段 (以 Onset 和发声/静音切换为界)
+      const segments = [];
+      let curSeg = null;
 
-      for (const ev of rawEvents) {
-        if (ev.durSec < 0.08) continue;
-        const rawBeats = ev.durSec / secPerBeat;
-
-        // 寻找最邻近的标准乐理时值
-        let bestBeats = 1.0;
-        let minDiff = Infinity;
-        for (const sb of standardBeats) {
-          const diff = Math.abs(rawBeats - sb);
-          if (diff < minDiff) {
-            minDiff = diff;
-            bestBeats = sb;
+      for (let i = 0; i < smoothed.length; i++) {
+        const f = smoothed[i];
+        if (!curSeg) {
+          curSeg = {
+            midi: f.midi,
+            rawMidi: f.rawMidi,
+            startTime: f.time,
+            endTime: f.time + (hopSize / sampleRate),
+            clarities: [f.clarity],
+            hasOnset: f.isOnset
+          };
+        } else {
+          const isSameState = (curSeg.midi === -1 && f.midi === -1) ||
+                              (curSeg.midi > 0 && f.midi > 0 && Math.abs(curSeg.midi - f.midi) <= 1 && !f.isOnset);
+          if (isSameState) {
+            curSeg.endTime = f.time + (hopSize / sampleRate);
+            curSeg.clarities.push(f.clarity);
+          } else {
+            segments.push(curSeg);
+            curSeg = {
+              midi: f.midi,
+              rawMidi: f.rawMidi,
+              startTime: f.time,
+              endTime: f.time + (hopSize / sampleRate),
+              clarities: [f.clarity],
+              hasOnset: f.isOnset
+            };
           }
         }
-        if (bestBeats < STATE.quantGrid) bestBeats = STATE.quantGrid;
+      }
+      if (curSeg) segments.push(curSeg);
 
-        if (ev.midi === -1) {
-          // 静音休止符处理 (合并过细休止符)
-          if (quantizedNotes.length > 0 && bestBeats >= 0.5) {
+      // 量化到绝对节拍网格，消除累积时值漂移
+      const quantizedNotes = [];
+      let lastEndTick = 0;
+
+      for (const seg of segments) {
+        const dur = seg.endTime - seg.startTime;
+        if (dur < 0.06) continue;
+
+        const startTick = Math.round(seg.startTime / gridStepSec);
+        const endTick = Math.max(startTick + 1, Math.round(seg.endTime / gridStepSec));
+        const durationBeats = (endTick - startTick) * STATE.quantGrid;
+
+        // 自动补齐节拍间隙休止符
+        if (quantizedNotes.length > 0 && startTick > lastEndTick) {
+          const restBeats = (startTick - lastEndTick) * STATE.quantGrid;
+          if (restBeats >= STATE.quantGrid) {
+            quantizedNotes.push({
+              midi: 0,
+              duration: restBeats,
+              isRest: true,
+              confidence: 0.95,
+              startTime: lastEndTick * gridStepSec,
+              endTime: startTick * gridStepSec,
+              pitchConfidence: 1.0,
+              onsetConfidence: 1.0
+            });
+          }
+        }
+
+        const avgClarity = seg.clarities.reduce((a, b) => a + b, 0) / Math.max(1, seg.clarities.length);
+        const pitchConfidence = Math.round(Math.max(0.2, Math.min(1.0, avgClarity)) * 100) / 100;
+        const onsetConfidence = seg.hasOnset ? 0.95 : 0.75;
+        const noteConfidence = Math.round((pitchConfidence * 0.65 + onsetConfidence * 0.35) * 100) / 100;
+
+        if (seg.midi === -1) {
+          if (quantizedNotes.length > 0 && durationBeats >= 0.5) {
             const lastNote = quantizedNotes[quantizedNotes.length - 1];
             if (lastNote.isRest) {
-              lastNote.duration = Math.min(4, lastNote.duration + bestBeats);
+              lastNote.duration = Math.min(4, lastNote.duration + durationBeats);
+              lastNote.endTime = seg.endTime;
             } else {
-              quantizedNotes.push({ midi: 0, duration: bestBeats, isRest: true });
+              quantizedNotes.push({
+                midi: 0,
+                duration: durationBeats,
+                isRest: true,
+                confidence: 0.92,
+                startTime: seg.startTime,
+                endTime: seg.endTime,
+                pitchConfidence: 1.0,
+                onsetConfidence: 1.0
+              });
             }
           }
         } else {
-          quantizedNotes.push({ midi: ev.midi, duration: bestBeats, isRest: false });
+          // 调式吸附
+          const activeScaleMode = document.getElementById('selectKey')?.value === 'AUTO' ? 'chromatic' : STATE.scaleMode;
+          const snappedMidi = snapPitchToScale(seg.rawMidi > 0 ? seg.rawMidi : seg.midi, STATE.key, activeScaleMode);
+
+          quantizedNotes.push({
+            midi: snappedMidi,
+            duration: durationBeats,
+            isRest: false,
+            confidence: noteConfidence,
+            startTime: seg.startTime,
+            endTime: seg.endTime,
+            pitchConfidence,
+            onsetConfidence
+          });
         }
+        lastEndTick = endTick;
       }
 
       while (quantizedNotes.length > 0 && quantizedNotes[quantizedNotes.length - 1].isRest) {
@@ -1883,7 +2131,7 @@
       };
       drawPitchContourCanvas();
 
-      if (document.getElementById('selectKey').value === 'AUTO') {
+      if (document.getElementById('selectKey')?.value === 'AUTO') {
         STATE.key = detectBestKey(STATE.notes);
       }
 
@@ -1958,8 +2206,11 @@
         const w = Math.max(4, toX(durSec));
         if (!n.isRest && n.midi > 0) {
           const y = toY(n.midi) - 5;
-          ctx.fillStyle = 'rgba(168, 85, 247, 0.45)';
-          ctx.strokeStyle = '#a855f7';
+          const conf = n.confidence !== undefined ? n.confidence : 0.85;
+          const isHigh = conf >= 0.80;
+          const isMid = conf >= 0.65;
+          ctx.fillStyle = isHigh ? 'rgba(34, 197, 94, 0.45)' : (isMid ? 'rgba(234, 179, 8, 0.45)' : 'rgba(239, 68, 68, 0.45)');
+          ctx.strokeStyle = isHigh ? '#22c55e' : (isMid ? '#eab308' : '#ef4444');
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.roundRect(x, y, w - 1, 10, 3);
@@ -2270,19 +2521,19 @@
         gray[i] = Math.round(0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2]);
       }
 
-      // 局部自适应二值化
+      // 局部自适应二值化 (Bradley Adaptive Binarization)
       const sensitivityEl = document.getElementById('selectOmrSensitivity');
       const sens = sensitivityEl ? sensitivityEl.value : 'medium';
       const threshRatio = sens === 'high' ? 0.09 : (sens === 'strict' ? 0.18 : 0.13);
       const winSize = Math.max(16, Math.min(48, Math.round(w / 30)));
       let binary = bradleyAdaptiveBinarize(gray, w, h, winSize, threshRatio);
 
-      // RLE 分析提取标准谱线尺寸
+      // RLE 分析提取标准谱线尺寸 (t = 谱线粗细, d = 线间距)
       const rle = estimateStaffDimensionsRle(binary, w, h);
       const estT = rle.t;
       const estD = rle.d;
 
-      // 倾斜校正
+      // 旋转校正 (Deskew)
       let detectedTiltAngle = 0;
       const cx = w / 2, cy = h / 2;
       const samplePoints = [];
@@ -2342,7 +2593,7 @@
         binary = bradleyAdaptiveBinarize(gray, w, h, winSize, threshRatio);
       }
 
-      // 统计五线谱水平线 (提高对断线、细线的包容度)
+      // 统计五线谱水平线
       const rowHist = new Int32Array(h);
       for (let y = 0; y < h; y++) {
         let count = 0;
@@ -2352,15 +2603,23 @@
         rowHist[y] = count;
       }
 
-      const maxRowDark = Math.max(...rowHist);
-      const lineThreshold = Math.max(w * 0.16, maxRowDark * 0.28);
+      // 避免 Math.max(...largeTypedArray) 参数栈溢出
+      let maxRowDark = 0;
+      for (let y = 0; y < h; y++) maxRowDark = Math.max(maxRowDark, rowHist[y]);
+      const lineThreshold = Math.max(w * 0.10, maxRowDark * 0.20);
       const candidateYs = [];
-
+      const peakCandidates = [];
       for (let y = 2; y < h - 2; y++) {
         if (rowHist[y] >= lineThreshold && rowHist[y] >= rowHist[y - 1] && rowHist[y] >= rowHist[y + 1]) {
-          if (candidateYs.length === 0 || y - candidateYs[candidateYs.length - 1] >= Math.round(estD * 0.60)) {
-            candidateYs.push(y);
-          }
+          peakCandidates.push(y);
+        }
+      }
+      for (const y of peakCandidates) {
+        const last = candidateYs[candidateYs.length - 1];
+        if (last === undefined || y - last >= Math.max(2, Math.round(estD * 0.48))) {
+          candidateYs.push(y);
+        } else if (rowHist[y] > rowHist[last]) {
+          candidateYs[candidateYs.length - 1] = y;
         }
       }
 
@@ -2375,7 +2634,7 @@
           group[4] - group[3]
         ];
         const avgD = spacings.reduce((a, b) => a + b, 0) / 4;
-        const isRegular = spacings.every(s => Math.abs(s - avgD) <= Math.max(3.5, avgD * 0.32));
+        const isRegular = spacings.every(s => Math.abs(s - avgD) <= Math.max(3.0, avgD * 0.24));
         if (isRegular && avgD >= 6) {
           staffSystems.push({
             lines: group,
@@ -2392,18 +2651,65 @@
 
       if (staffSystems.length === 0) {
         showToast('未能自动检测到标准五线谱横线，请确认图片平整或使用高灵敏模式', 'warning');
-        STATE.omrData = { img: offCanvas, systems: [], notes: [], selectedNoteIndex: null, binary, binaryW: w, binaryH: h };
+        STATE.omrData = { img: offCanvas, systems: [], notes: [], selectedNoteIndex: null, selectedNoteIndices: [], binary, binaryW: w, binaryH: h };
         renderOmrCanvas();
         return;
       }
 
-      // ========================================================================
-      // 高召回率形态学开运算符头分离引擎 (Request 4: 彻底解决零散识别问题)
-      // 通过椭圆核剥离细符干、连音横梁与孤立谱线，使连音符、和弦、低音谱表全部显现！
-      // ========================================================================
+      // 每组谱表独立检测有效横向范围与谱号 (Treble vs Bass)
+      const userClefMode = document.querySelector('input[name="clefType"]:checked')?.value || 'auto';
+
+      staffSystems.forEach((sys, sysIdx) => {
+        let firstInk = w - 1;
+        let lastInk = 0;
+        for (const ly of sys.lines) {
+          const y0 = Math.max(0, ly - Math.max(1, Math.round(sys.t)));
+          const y1 = Math.min(h - 1, ly + Math.max(1, Math.round(sys.t)));
+          for (let yy = y0; yy <= y1; yy++) {
+            const row = yy * w;
+            for (let x = 0; x < w; x++) {
+              if (binary[row + x]) { firstInk = Math.min(firstInk, x); break; }
+            }
+            for (let x = w - 1; x >= 0; x--) {
+              if (binary[row + x]) { lastInk = Math.max(lastInk, x); break; }
+            }
+          }
+        }
+        sys.firstInk = firstInk;
+        sys.lastInk = lastInk;
+        sys.leftX = Math.max(0, firstInk + Math.round(sys.d * 3.4));
+        sys.rightX = Math.min(w - 1, lastInk - Math.round(sys.d * 0.35));
+
+        // 谱号特征识别 (Treble vs Bass)
+        let headerDarkAbove = 0, headerDarkBelow = 0;
+        const hx0 = Math.max(0, firstInk);
+        const hx1 = Math.min(w - 1, firstInk + Math.round(sys.d * 2.8));
+        for (let y = Math.max(0, sys.lines[0] - Math.round(sys.d * 1.5)); y <= Math.min(h - 1, sys.lines[4] + Math.round(sys.d * 1.5)); y++) {
+          const r = y * w;
+          for (let x = hx0; x <= hx1; x++) {
+            if (binary[r + x]) {
+              if (y < sys.lines[0]) headerDarkAbove++;
+              if (y > sys.lines[4]) headerDarkBelow++;
+            }
+          }
+        }
+
+        if (userClefMode === 'treble') {
+          sys.clef = 'treble';
+        } else if (userClefMode === 'bass') {
+          sys.clef = 'bass';
+        } else if (userClefMode === 'grand') {
+          sys.clef = (sysIdx % 2 === 0) ? 'treble' : 'bass';
+        } else {
+          // 自动模式：高音谱号向上突破第 5 线、向下突破第 1 线，墨迹显著
+          sys.clef = (headerDarkAbove > sys.d * 1.8 && headerDarkBelow > sys.d * 1.8) ? 'treble' : ((sysIdx % 2 === 1) ? 'bass' : 'treble');
+        }
+      });
+
+      // 形态学开运算剥离细符干、连音横梁与孤立谱线
       const globalD = staffSystems.reduce((acc, s) => acc + s.d, 0) / staffSystems.length;
-      const rx = Math.max(2, Math.round(globalD * 0.28));
-      const ry = Math.max(2, Math.round(globalD * 0.22));
+      const rx = Math.max(2, Math.round(globalD * 0.24));
+      const ry = Math.max(2, Math.round(globalD * 0.18));
 
       const offsets = [];
       for (let dy = -ry; dy <= ry; dy++) {
@@ -2446,7 +2752,7 @@
         }
       }
 
-      // 提取全部高保真符头连通域
+      // 提取全部连通域候选组件
       const visited = new Uint8Array(w * h);
       const rawComps = [];
 
@@ -2484,115 +2790,227 @@
             const bh = cMaxY - cMinY + 1;
             const cx = Math.round(sumX / area);
             const cy = Math.round(sumY / area);
+            const aspect = bw / Math.max(1, bh);
 
-            // 避开极端细长或过大噪点
-            if (area >= globalD * globalD * 0.15 && area <= globalD * globalD * 8.0) {
-              rawComps.push({ cx, cy, cMinX, cMaxX, cMinY, cMaxY, bw, bh, area });
+            if (area >= globalD * globalD * 0.12 && area <= globalD * globalD * 8.0) {
+              rawComps.push({ cx, cy, cMinX, cMaxX, cMinY, cMaxY, bw, bh, area, aspect });
             }
           }
         }
       }
 
-      const clefMode = document.querySelector('input[name="clefType"]:checked').value;
+      // 符号分类器 (Symbol Classification Engine)
+      function classifyOmrComponent(comp, sys, d) {
+        const aspect = comp.aspect;
+        const isHeader = comp.cx < (sys.leftX || (sys.firstInk + d * 3.4));
+
+        // 1. 小节线检测 (Barline)
+        if (comp.bh >= d * 3.2 && comp.bw <= d * 0.55 && aspect <= 0.18) {
+          return { symbolType: 'barline', isNote: false, penalty: 1.0 };
+        }
+
+        // 2. 符杠横梁 (Beam) - 坚决禁止将符杠当成音符生成几十个假音！
+        if (comp.bw >= d * 1.8 && (aspect >= 2.0 || comp.bh <= d * 1.1)) {
+          return { symbolType: 'beam', isNote: false, penalty: 1.0 };
+        }
+
+        // 3. 符干 (Stem)
+        if (comp.bh >= d * 1.8 && comp.bw <= d * 0.45 && aspect <= 0.25) {
+          return { symbolType: 'stem', isNote: false, penalty: 1.0 };
+        }
+
+        // 4. Header 区域符号 (Clef / KeySignature / TimeSignature)
+        if (isHeader) {
+          if (comp.bh >= d * 2.5) {
+            return { symbolType: 'clef', isNote: false, penalty: 1.0 };
+          }
+          if (comp.bh >= d * 1.5 && comp.bw >= d * 0.6) {
+            return { symbolType: 'timeSignature', isNote: false, penalty: 1.0 };
+          }
+          return { symbolType: 'keySignature', isNote: false, penalty: 0.95 };
+        }
+
+        // 5. 符头候选 (Notehead)
+        if (comp.bw >= d * 0.60 && comp.bw <= d * 1.75 &&
+            comp.bh >= d * 0.50 && comp.bh <= d * 1.55 &&
+            aspect >= 0.65 && aspect <= 1.85 &&
+            comp.area >= d * d * 0.18 && comp.area <= d * d * 2.4) {
+          return { symbolType: 'notehead', isNote: true, penalty: 0.0 };
+        }
+
+        return { symbolType: 'unknown', isNote: false, penalty: 0.85 };
+      }
+
+      // 符头几何置信度评分 (Notehead Geometric Scoring)
+      function computeNoteheadScore(comp, sys, d, stemSupport = true) {
+        const aspect = comp.aspect;
+        const area = comp.area;
+        const classification = classifyOmrComponent(comp, sys, d);
+
+        if (!classification.isNote) {
+          return {
+            confidence: 0.1,
+            symbolType: classification.symbolType,
+            isNote: false,
+            scores: {
+              geometry: 0.1,
+              staffPosition: 0.1,
+              stemSupport: 0,
+              headerPenalty: classification.symbolType.includes('Signature') || classification.symbolType === 'clef' ? 1 : 0,
+              beamPenalty: classification.symbolType === 'beam' ? 1 : 0,
+              clefPenalty: classification.symbolType === 'clef' ? 1 : 0
+            }
+          };
+        }
+
+        // 几何评分
+        const geomAspect = 1 - Math.min(1, Math.abs(aspect - 1.25) / 0.75);
+        const geomArea = 1 - Math.min(1, Math.abs(area - 0.75 * d * d) / (0.75 * d * d));
+        const geometryScore = Math.max(0, geomAspect * 0.55 + geomArea * 0.45);
+
+        // 谱表网格线/间吸附评分
+        const bottomLineY = sys.lines[4];
+        const step = Math.round((bottomLineY - comp.cy) / (d / 2));
+        const targetY = bottomLineY - step * (d / 2);
+        const distY = Math.abs(comp.cy - targetY);
+        const staffPositionScore = Math.max(0, 1 - Math.min(1, distY / (d * 0.4)));
+
+        const stemScore = stemSupport ? 1.0 : 0.45;
+        const confidence = Math.max(0.1, Math.min(0.99,
+          geometryScore * 0.40 + staffPositionScore * 0.35 + stemScore * 0.25 - classification.penalty * 0.8
+        ));
+
+        return {
+          confidence: Math.round(confidence * 100) / 100,
+          symbolType: 'notehead',
+          isNote: true,
+          step,
+          scores: {
+            geometry: Math.round(geometryScore * 100) / 100,
+            staffPosition: Math.round(staffPositionScore * 100) / 100,
+            stemSupport: stemSupport ? 1 : 0,
+            headerPenalty: 0,
+            beamPenalty: 0,
+            clefPenalty: 0
+          }
+        };
+      }
+
       const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
-      const detectedNotes = [];
       let globalNoteId = 1;
+      const detectedNotes = [];
 
       staffSystems.forEach((sys, sysIdx) => {
         const d = sys.d;
         const bottomLineY = sys.lines[4];
-        const isTreble = clefMode === 'treble' ? true : (clefMode === 'bass' ? false : (sysIdx % 2 === 0));
-        const bottomDiatonic = isTreble ? 2 : 4;
+        const isTreble = sys.clef === 'treble';
+        const bottomDiatonic = isTreble ? 2 : 4; // E4 (treble) vs G2 (bass)
         const baseOct = isTreble ? 4 : 2;
 
-        // 避开左侧大谱号与调号区域 (约 3.2 个线间距)
-        const leftBound = Math.round(d * 3.2);
-        const rightBound = w - Math.round(d * 0.5);
+        const leftBound = Number.isFinite(sys.leftX) ? sys.leftX : Math.round(d * 3.4);
+        const rightBound = Number.isFinite(sys.rightX) ? sys.rightX : w - Math.round(d * 0.5);
 
         const sysComps = rawComps.filter(c => {
           return c.cx >= leftBound && c.cx <= rightBound && c.cy >= sys.topY && c.cy <= sys.bottomY;
         });
 
-        // 拆分与整理符头
         const sysNotes = [];
         for (const comp of sysComps) {
-          // 若为连音线横梁聚合块 (宽度大于 1.6d)，拆分为多个音符
-          if (comp.bw >= d * 1.6) {
-            const colHist = new Int32Array(comp.bw);
-            for (let sy = comp.cMinY; sy <= comp.cMaxY; sy++) {
-              for (let sx = comp.cMinX; sx <= comp.cMaxX; sx++) {
-                if (opened[sy * w + sx]) colHist[sx - comp.cMinX]++;
-              }
+          // 符干垂直支撑检查
+          let stemSupport = false;
+          const sx = comp.cx;
+          for (let sy = comp.cy - Math.round(d * 3.0); sy <= comp.cy + Math.round(d * 3.0); sy++) {
+            if (sy >= 0 && sy < h && binary[sy * w + sx] === 1 && Math.abs(sy - comp.cy) > d * 0.6) {
+              stemSupport = true;
+              break;
             }
-            for (let sx = 1; sx < comp.bw - 1; sx++) {
-              if (colHist[sx] >= d * 0.4 && colHist[sx] >= colHist[sx - 1] && colHist[sx] >= colHist[sx + 1]) {
-                const subX = comp.cMinX + sx;
-                const step = Math.round((bottomLineY - comp.cy) / (d / 2));
-                const totalDiatonic = bottomDiatonic + step;
-                const octOffset = Math.floor(totalDiatonic / 7);
-                const deg = ((totalDiatonic % 7) + 7) % 7;
-                const midi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
-
-                sysNotes.push({
-                  id: globalNoteId++,
-                  x: subX,
-                  y: comp.cy,
-                  midi,
-                  duration: 1,
-                  isRest: false,
-                  step,
-                  sysIdx,
-                  box: {
-                    x: Math.round(subX - d * 0.6),
-                    y: Math.round(bottomLineY - step * (d / 2) - d * 0.55),
-                    w: Math.round(d * 1.2),
-                    h: Math.round(d * 1.1)
-                  }
-                });
-              }
-            }
-          } else if (comp.bw >= d * 0.35 && comp.bw <= d * 2.8 && comp.bh >= d * 0.35 && comp.bh <= d * 2.8) {
-            const step = Math.round((bottomLineY - comp.cy) / (d / 2));
-            const totalDiatonic = bottomDiatonic + step;
-            const octOffset = Math.floor(totalDiatonic / 7);
-            const deg = ((totalDiatonic % 7) + 7) % 7;
-            const midi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
-
-            // 判别空心(二分/全音)
-            let coreDark = 0, coreTotal = 0;
-            const crx = Math.max(2, Math.round(d * 0.25));
-            const cry = Math.max(2, Math.round(d * 0.20));
-            for (let dy = -cry; dy <= cry; dy++) {
-              for (let dx = -crx; dx <= crx; dx++) {
-                const px = comp.cx + dx, py = comp.cy + dy;
-                if (px >= 0 && px < w && py >= 0 && py < h) {
-                  coreTotal++;
-                  if (binary[py * w + px] === 1) coreDark++;
-                }
-              }
-            }
-            const isHollow = (coreDark / Math.max(1, coreTotal)) < 0.45;
-
-            sysNotes.push({
-              id: globalNoteId++,
-              x: comp.cx,
-              y: comp.cy,
-              midi,
-              duration: isHollow ? 2 : 1,
-              isRest: false,
-              step,
-              sysIdx,
-              box: {
-                x: Math.round(comp.cx - d * 0.6),
-                y: Math.round(bottomLineY - step * (d / 2) - d * 0.55),
-                w: Math.round(d * 1.2),
-                h: Math.round(d * 1.1)
-              }
-            });
           }
+
+          const scoreObj = computeNoteheadScore(comp, sys, d, stemSupport);
+          if (!scoreObj.isNote || scoreObj.confidence < 0.40) {
+            continue; // 彻底排除符杠、谱号、小节线与无效噪点！
+          }
+
+          const step = scoreObj.step;
+          const totalDiatonic = bottomDiatonic + step;
+          const octOffset = Math.floor(totalDiatonic / 7);
+          const deg = ((totalDiatonic % 7) + 7) % 7;
+          const midi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
+
+          // 第一层：判断实心/空心
+          let coreDark = 0, coreTotal = 0;
+          const crx = Math.max(2, Math.round(d * 0.25));
+          const cry = Math.max(2, Math.round(d * 0.20));
+          for (let dy = -cry; dy <= cry; dy++) {
+            for (let dx = -crx; dx <= crx; dx++) {
+              const px = comp.cx + dx, py = comp.cy + dy;
+              if (px >= 0 && px < w && py >= 0 && py < h) {
+                coreTotal++;
+                if (binary[py * w + px] === 1) coreDark++;
+              }
+            }
+          }
+          const isHollow = (coreDark / Math.max(1, coreTotal)) < 0.45;
+
+          // 第二层：符干与横梁时值检测
+          let duration = isHollow ? (stemSupport ? 2 : 4) : 1;
+          if (!isHollow && stemSupport) {
+            let beamCount = 0;
+            const topCheckY = comp.cy - Math.round(d * 3.0);
+            if (topCheckY >= 0) {
+              let darkH = 0;
+              for (let bx = comp.cx - Math.round(d * 0.8); bx <= comp.cx + Math.round(d * 0.8); bx++) {
+                if (bx >= 0 && bx < w && binary[topCheckY * w + bx]) darkH++;
+              }
+              if (darkH >= d * 1.0) beamCount = 1;
+            }
+            if (beamCount === 1) duration = 0.5; // 八分音符
+          }
+
+          // 第三层：附点检测
+          let hasDot = false;
+          let dotDark = 0;
+          const dotX0 = comp.cx + Math.round(d * 0.8);
+          const dotX1 = comp.cx + Math.round(d * 1.5);
+          for (let dy = -Math.round(d * 0.25); dy <= Math.round(d * 0.25); dy++) {
+            for (let dx = dotX0; dx <= dotX1; dx++) {
+              const py = comp.cy + dy;
+              if (dx >= 0 && dx < w && py >= 0 && py < h && binary[py * w + dx]) {
+                dotDark++;
+              }
+            }
+          }
+          if (dotDark >= 2 && dotDark <= d * d * 0.35) {
+            hasDot = true;
+            duration *= 1.5;
+          }
+
+          sysNotes.push({
+            id: globalNoteId++,
+            x: comp.cx,
+            y: comp.cy,
+            midi,
+            duration,
+            isRest: false,
+            step,
+            sysIdx,
+            clef: sys.clef,
+            staffIndex: sysIdx,
+            staffPosition: step,
+            symbolType: 'notehead',
+            confidence: scoreObj.confidence,
+            scores: scoreObj.scores,
+            hasDot,
+            box: {
+              x: Math.round(comp.cx - d * 0.6),
+              y: Math.round(bottomLineY - step * (d / 2) - d * 0.55),
+              w: Math.round(d * 1.2),
+              h: Math.round(d * 1.1)
+            }
+          });
         }
 
-        // 去重过于邻近的同音符
+        // 去除过于重叠的冗余音符
         sysNotes.sort((a, b) => a.x - b.x);
         const filteredSysNotes = [];
         for (const n of sysNotes) {
@@ -2611,6 +3029,7 @@
         systems: staffSystems,
         notes: detectedNotes,
         selectedNoteIndex: detectedNotes.length > 0 ? 0 : null,
+        selectedNoteIndices: [],
         binary,
         binaryW: w,
         binaryH: h,
@@ -2621,92 +3040,18 @@
       const badgeCountEl = document.getElementById('centerOmrBadgeCount');
       if (badgeCountEl) {
         badgeCountEl.textContent = `${detectedNotes.length}音`;
-        badgeCountEl.classList.remove('hidden');
       }
-      const leftStatusCard = document.getElementById('omrLeftStatusCard');
-      const leftStatusCount = document.getElementById('omrLeftStatusCount');
-      if (leftStatusCard && leftStatusCount) {
-        leftStatusCount.textContent = `${detectedNotes.length} 个音符`;
-        leftStatusCard.classList.remove('hidden');
-      }
+      updateOmrStatusCard(staffSystems.length, detectedNotes.length);
 
-      // 自动切换至中间【五线谱大图定位与校对工作台】
-      switchCenterView('omr');
+      // 同步全局主乐谱简谱
+      STATE.notes = detectedNotes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false, confidence: n.confidence }));
+      renderJianpuScore();
+      syncRawTextFromNotes();
+
       renderOmrCanvas();
-      updateOmrToolbarBadge();
-
-      const tiltInfo = Math.abs(detectedTiltAngle) >= 0.4
-        ? `📐 倾斜校正: ${detectedTiltAngle > 0 ? '+' : ''}${detectedTiltAngle.toFixed(1)}°`
-        : `📐 谱面水平度良好`;
-      const statsBadgeEl = document.getElementById('omrStatsBadge');
-      if (statsBadgeEl) {
-        statsBadgeEl.innerHTML =
-          `<span>✅ 识别成功：${tiltInfo} · 定位 ${staffSystems.length} 组谱表，提取 ${detectedNotes.length} 个音符（支持在大图上拉框智能框选补音）</span>`;
-      }
-
-      STATE.notes = detectedNotes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
-      updateHeaderLabels();
-      renderJianpuScore();
-      syncRawTextFromNotes();
-      showToast(`五线谱已展开！已高精提取 ${detectedNotes.length} 个音符，支持拉框框选补音`, 'success');
+      showToast(`五线谱识别成功！已精确定位 ${detectedNotes.length} 个音符并过滤非音符符号`, 'success');
     }
 
-    function switchCenterView(view) {
-      const jianpuWs = document.getElementById('centerJianpuWorkspace');
-      const omrWs = document.getElementById('centerOmrWorkspace');
-      const btnJianpu = document.getElementById('btnViewJianpu');
-      const btnOmr = document.getElementById('btnViewOmr');
-      const omrBottomDock = document.getElementById('omrBottomDock');
-      const playbackExportDock = document.getElementById('playbackExportDock');
-      const noteEditorBar = document.getElementById('noteEditorBar');
-
-      const activeClass = 'px-4 py-1.5 rounded-xl text-xs font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer';
-      const inactiveClass = 'px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer flex items-center space-x-1';
-
-      if (view === 'omr') {
-        if (!STATE.omrData || !STATE.omrData.img) {
-          showToast('请先在左侧上传五线谱图片或选择测试示例', 'info');
-          return;
-        }
-        omrWs.classList.remove('hidden');
-        jianpuWs.classList.add('hidden');
-        btnOmr.className = activeClass;
-        btnJianpu.className = inactiveClass;
-
-        // 底部悬浮控制台：切换为浅色修谱底栏，隐藏播放/导出栏与音符编辑栏
-        if (omrBottomDock) omrBottomDock.classList.remove('hidden');
-        if (playbackExportDock) playbackExportDock.classList.add('hidden');
-        if (noteEditorBar) noteEditorBar.classList.add('hidden');
-
-        renderOmrCanvas();
-        updateOmrToolbarBadge();
-      } else {
-        jianpuWs.classList.remove('hidden');
-        omrWs.classList.add('hidden');
-        btnJianpu.className = activeClass;
-        btnOmr.className = inactiveClass;
-
-        // 底部悬浮控制台：切换为播放/导出栏，隐藏修谱底栏
-        if (omrBottomDock) omrBottomDock.classList.add('hidden');
-        if (playbackExportDock) playbackExportDock.classList.remove('hidden');
-
-        renderJianpuScore();
-      }
-    }
-
-    // 确认五线谱校对完成，一键切换成简谱
-    function confirmOmrAndSwitchToJianpu() {
-      if (STATE.omrData && STATE.omrData.notes) {
-        STATE.notes = STATE.omrData.notes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
-      }
-      updateHeaderLabels();
-      renderJianpuScore();
-      syncRawTextFromNotes();
-      switchCenterView('jianpu');
-      showToast('🎉 谱面已确认！已为您生成出版级简谱', 'success');
-    }
-
-    // 渲染带有交互标记框的 OMR 画布
     function renderOmrCanvas() {
       if (!STATE.omrData || !STATE.omrData.img) return;
       const canvas = document.getElementById('omrCanvas');
@@ -2734,9 +3079,10 @@
       // 绘制音符高亮方框与简谱唱名徽标
       const notes = STATE.omrData.notes || [];
       const selectedIdx = STATE.omrData.selectedNoteIndex;
+      const selectedSet = new Set(STATE.omrData.selectedNoteIndices || []);
 
       notes.forEach((n, idx) => {
-        const isSel = idx === selectedIdx;
+        const isSel = idx === selectedIdx || selectedSet.has(idx);
         const box = n.box;
 
         if (isSel) {
@@ -2755,9 +3101,12 @@
           ctx.fillRect(box.x + box.w - 3, box.y + box.h - 3, 6, 6);
         } else {
           // 常规状态：清爽翡翠绿线框
-          ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
+          const confidence = n.confidence ?? 1;
+          const lowConfidence = confidence < 0.70;
+          const midConfidence = confidence < 0.84;
+          ctx.fillStyle = lowConfidence ? 'rgba(239, 68, 68, 0.16)' : (midConfidence ? 'rgba(245, 158, 11, 0.14)' : 'rgba(16, 185, 129, 0.12)');
           ctx.fillRect(box.x, box.y, box.w, box.h);
-          ctx.strokeStyle = '#10b981';
+          ctx.strokeStyle = lowConfidence ? '#ef4444' : (midConfidence ? '#f59e0b' : '#10b981');
           ctx.lineWidth = 1.6;
           ctx.strokeRect(box.x, box.y, box.w, box.h);
         }
@@ -2863,6 +3212,7 @@
         if (hitIdx !== -1) {
           // 命中现有音符：进入单音拖拽变音模式
           STATE.omrData.selectedNoteIndex = hitIdx;
+          STATE.omrData.selectedNoteIndices = [];
           const note = STATE.omrData.notes[hitIdx];
           isDraggingNote = true;
           initialMidi = note.midi;
@@ -2955,12 +3305,25 @@
             // 位移小于 8px：判定为单次点击，在五线谱上补加单音
             addSingleNoteAt(sb.startX, sb.startY);
           } else if (boxW >= 8 && boxH >= 8) {
-            // 位移显著：执行智能拉框框选与批量自动识音提取！(Request 5)
             const minX = Math.min(sb.startX, sb.currentX);
             const maxX = Math.max(sb.startX, sb.currentX);
             const minY = Math.min(sb.startY, sb.currentY);
             const maxY = Math.max(sb.startY, sb.currentY);
-            extractNotesFromSelectedRegion(minX, maxX, minY, maxY);
+            const selected = STATE.omrData.notes
+              .map((note, idx) => ({ note, idx }))
+              .filter(({ note }) => {
+                const b = note.box;
+                return b.x + b.w >= minX && b.x <= maxX && b.y + b.h >= minY && b.y <= maxY;
+              })
+              .map(({ idx }) => idx);
+            if (selected.length > 0) {
+              STATE.omrData.selectedNoteIndices = selected;
+              STATE.omrData.selectedNoteIndex = selected[selected.length - 1];
+              updateOmrToolbarBadge();
+              showToast(`已框选 ${selected.length} 个音符，可批量删除`, 'info');
+            } else {
+              extractNotesFromSelectedRegion(minX, maxX, minY, maxY);
+            }
           }
           renderOmrCanvas();
         }
@@ -3039,7 +3402,7 @@
       const h = STATE.omrData.binaryH;
       const bin = STATE.omrData.binary;
       const systems = STATE.omrData.systems;
-      const clefMode = document.querySelector('input[name="clefType"]:checked').value;
+      const clefMode = document.querySelector('input[name="clefType"]:checked')?.value || 'auto';
 
       // 确定框选重叠的谱表
       const matchedSystems = [];
@@ -3054,14 +3417,16 @@
       }
 
       const avgD = matchedSystems[0].sys.d;
-      const rx = Math.max(2, Math.round(avgD * 0.28));
-      const ry = Math.max(2, Math.round(avgD * 0.22));
+      const rx = Math.max(2, Math.round(avgD * 0.24));
+      const ry = Math.max(2, Math.round(avgD * 0.18));
 
-      // 仅对框选区域做局部高效形态学开运算
+      // 仅对框选选区分配紧凑内存，避免全图 W*H 数组造成的 GC 停顿与卡顿
       const bx1 = Math.max(0, Math.floor(minX));
       const bx2 = Math.min(w - 1, Math.ceil(maxX));
       const by1 = Math.max(0, Math.floor(minY));
       const by2 = Math.min(h - 1, Math.ceil(maxY));
+      const bw = bx2 - bx1 + 1;
+      const bh = by2 - by1 + 1;
 
       const offsets = [];
       for (let dy = -ry; dy <= ry; dy++) {
@@ -3071,11 +3436,12 @@
       }
 
       // 局部腐蚀
-      const localEroded = new Uint8Array(w * h);
+      const localEroded = new Uint8Array(bw * bh);
       for (let y = Math.max(ry, by1); y <= Math.min(h - 1 - ry, by2); y++) {
-        const yW = y * w;
+        const localY = y - by1;
         for (let x = Math.max(rx, bx1); x <= Math.min(w - 1 - rx, bx2); x++) {
-          if (bin[yW + x] === 0) continue;
+          const localX = x - bx1;
+          if (bin[y * w + x] === 0) continue;
           let ok = true;
           for (let i = 0; i < offsets.length; i++) {
             if (bin[(y + offsets[i][1]) * w + (x + offsets[i][0])] !== 1) {
@@ -3083,34 +3449,37 @@
               break;
             }
           }
-          if (ok) localEroded[yW + x] = 1;
+          if (ok) localEroded[localY * bw + localX] = 1;
         }
       }
 
-      // 局部膨胀 -> 得到纯符头图
-      const localOpened = new Uint8Array(w * h);
+      // 局部膨胀
+      const localOpened = new Uint8Array(bw * bh);
       for (let y = by1; y <= by2; y++) {
-        const yW = y * w;
+        const localY = y - by1;
         for (let x = bx1; x <= bx2; x++) {
-          if (localEroded[yW + x] === 1) {
+          const localX = x - bx1;
+          if (localEroded[localY * bw + localX] === 1) {
             for (let i = 0; i < offsets.length; i++) {
               const nx = x + offsets[i][0];
               const ny = y + offsets[i][1];
               if (nx >= bx1 && nx <= bx2 && ny >= by1 && ny <= by2) {
-                localOpened[ny * w + nx] = 1;
+                localOpened[(ny - by1) * bw + (nx - bx1)] = 1;
               }
             }
           }
         }
       }
 
-      // 提取连通域
-      const visited = new Uint8Array(w * h);
+      // 提取框内连通域
+      const visited = new Uint8Array(bw * bh);
       const candidates = [];
 
       for (let y = by1; y <= by2; y++) {
+        const localY = y - by1;
         for (let x = bx1; x <= bx2; x++) {
-          const idx = y * w + x;
+          const localX = x - bx1;
+          const idx = localY * bw + localX;
           if (localOpened[idx] === 1 && !visited[idx]) {
             let q = [[x, y]], area = 0, sumX = 0, sumY = 0;
             let cMinX = x, cMaxX = x, cMinY = y, cMaxY = y;
@@ -3129,7 +3498,7 @@
               for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
                 const nx = qx + dx, ny = qy + dy;
                 if (nx >= bx1 && nx <= bx2 && ny >= by1 && ny <= by2) {
-                  const nIdx = ny * w + nx;
+                  const nIdx = (ny - by1) * bw + (nx - bx1);
                   if (localOpened[nIdx] === 1 && !visited[nIdx]) {
                     visited[nIdx] = 1;
                     q.push([nx, ny]);
@@ -3138,34 +3507,27 @@
               }
             }
 
-            const bw = cMaxX - cMinX + 1;
-            const bh = cMaxY - cMinY + 1;
+            const compW = cMaxX - cMinX + 1;
+            const compH = cMaxY - cMinY + 1;
             const cx = Math.round(sumX / area);
             const cy = Math.round(sumY / area);
+            const aspect = compW / Math.max(1, compH);
 
-            // 若宽度过宽(横梁连音符)，进行峰值拆分
-            if (bw >= avgD * 1.6) {
-              const colHist = new Int32Array(bw);
-              for (let sy = cMinY; sy <= cMaxY; sy++) {
-                for (let sx = cMinX; sx <= cMaxX; sx++) {
-                  if (localOpened[sy * w + sx]) colHist[sx - cMinX]++;
-                }
-              }
-              for (let sx = 1; sx < bw - 1; sx++) {
-                if (colHist[sx] >= avgD * 0.4 && colHist[sx] >= colHist[sx - 1] && colHist[sx] >= colHist[sx + 1]) {
-                  candidates.push({ cx: cMinX + sx, cy, bw: Math.round(avgD * 1.1), bh, area: Math.round(area / 2) });
-                }
-              }
-            } else if (bw >= avgD * 0.35 && bw <= avgD * 2.8 && bh >= avgD * 0.35 && bh <= avgD * 2.8 && area >= avgD * avgD * 0.15) {
-              candidates.push({ cx, cy, bw, bh, area });
+            // 过滤符杠横梁与细长谱线，保留正常符头
+            if (compW >= avgD * 0.60 && compW <= avgD * 1.8 &&
+                compH >= avgD * 0.50 && compH <= avgD * 1.6 &&
+                aspect >= 0.65 && aspect <= 1.85 &&
+                area >= avgD * avgD * 0.18 && area <= avgD * avgD * 2.5) {
+              candidates.push({ cx, cy, bw: compW, bh: compH, area, aspect });
             }
           }
         }
       }
 
       let addedCount = 0;
+      const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
+
       candidates.forEach(cand => {
-        // 查找所属系统
         let targetSys = null, targetSIdx = 0;
         for (const m of matchedSystems) {
           if (cand.cy >= m.sys.topY - m.sys.d && cand.cy <= m.sys.bottomY + m.sys.d) {
@@ -3178,30 +3540,57 @@
 
         const d = targetSys.d;
         // 避开已有音符
-        const exists = STATE.omrData.notes.some(n => Math.hypot(n.x - cand.cx, n.y - cand.cy) < d * 0.60);
+        const exists = STATE.omrData.notes.some(n => Math.hypot(n.x - cand.cx, n.y - cand.cy) < d * 0.55);
         if (exists) return;
 
         const bottomLineY = targetSys.lines[4];
         const step = Math.round((bottomLineY - cand.cy) / (d / 2));
-        const isTreble = clefMode === 'treble' ? true : (clefMode === 'bass' ? false : (targetSIdx % 2 === 0));
+        const isTreble = targetSys.clef === 'treble';
         const bottomDiatonic = isTreble ? 2 : 4;
         const baseOct = isTreble ? 4 : 2;
-        const diatonicSemitones = [0, 2, 4, 5, 7, 9, 11];
 
         const totalDiatonic = bottomDiatonic + step;
         const octOffset = Math.floor(totalDiatonic / 7);
         const deg = ((totalDiatonic % 7) + 7) % 7;
         const midi = (baseOct + octOffset + 1) * 12 + diatonicSemitones[deg];
 
+        // 判别空心
+        let coreDark = 0, coreTotal = 0;
+        const crx = Math.max(2, Math.round(d * 0.25));
+        const cry = Math.max(2, Math.round(d * 0.20));
+        for (let dy = -cry; dy <= cry; dy++) {
+          for (let dx = -crx; dx <= crx; dx++) {
+            const px = cand.cx + dx, py = cand.cy + dy;
+            if (px >= 0 && px < w && py >= 0 && py < h) {
+              coreTotal++;
+              if (bin[py * w + px] === 1) coreDark++;
+            }
+          }
+        }
+        const isHollow = (coreDark / Math.max(1, coreTotal)) < 0.45;
+
         const newNote = {
           id: Date.now() + Math.floor(Math.random() * 10000),
           x: cand.cx,
           y: Math.round(bottomLineY - step * (d / 2)),
           midi,
-          duration: 1,
+          duration: isHollow ? 2 : 1,
           isRest: false,
           step,
           sysIdx: targetSIdx,
+          clef: targetSys.clef,
+          staffIndex: targetSIdx,
+          staffPosition: step,
+          symbolType: 'notehead',
+          confidence: 0.90,
+          scores: {
+            geometry: 0.90,
+            staffPosition: 0.95,
+            stemSupport: 1,
+            headerPenalty: 0,
+            beamPenalty: 0,
+            clefPenalty: 0
+          },
           box: {
             x: Math.round(cand.cx - d * 0.6),
             y: Math.round(bottomLineY - step * (d / 2) - d * 0.55),
@@ -3219,14 +3608,13 @@
         playOmrPreviewTone(60, 0.25);
         showToast(`🎯 框选提取成功！已在选区内识别并添加 ${addedCount} 个音符`, 'success');
       } else {
-        // 若没有新提取到音符，检查框内是否有已有音符，将其高亮选中
         const inBoxIdx = STATE.omrData.notes.findIndex(n => n.x >= minX && n.x <= maxX && n.y >= minY && n.y <= maxY);
         if (inBoxIdx !== -1) {
           STATE.omrData.selectedNoteIndex = inBoxIdx;
           updateOmrToolbarBadge();
           showToast(`已选中框内第 #${inBoxIdx + 1} 个音符`, 'info');
         } else {
-          showToast('框选区域内未检测到明显符头，可尝试缩小或单点补音', 'info');
+          showToast('选区内未检测到标准符头，可尝试缩小选区或单点补音', 'info');
         }
       }
     }
@@ -3256,6 +3644,12 @@
     // 交互工具栏状态更新
     function updateOmrToolbarBadge() {
       const badge = document.getElementById('omrSelectedNoteBadge');
+      const batchBtn = document.getElementById('omrDeleteBatchBtn');
+      const selectedCountEl = document.getElementById('omrSelectedCount');
+      const selectedCount = STATE.omrData && STATE.omrData.selectedNoteIndices
+        ? STATE.omrData.selectedNoteIndices.length : 0;
+      if (batchBtn) batchBtn.classList.toggle('hidden', selectedCount < 2);
+      if (selectedCountEl) selectedCountEl.textContent = String(selectedCount);
       if (!badge || !STATE.omrData || STATE.omrData.selectedNoteIndex === null) {
         if (badge) badge.textContent = '未选择';
         return;
@@ -3344,6 +3738,7 @@
       }
       const idx = STATE.omrData.selectedNoteIndex;
       STATE.omrData.notes.splice(idx, 1);
+      STATE.omrData.selectedNoteIndices = [];
       if (STATE.omrData.notes.length === 0) {
         STATE.omrData.selectedNoteIndex = null;
       } else {
@@ -3355,6 +3750,26 @@
       renderJianpuScore();
       syncRawTextFromNotes();
       showToast('已删除该音符', 'info');
+    }
+
+    // 批量删除框选的多个音符：倒序删除避免前面的索引变化影响后续目标。
+    function omrDeleteSelectedNotes() {
+      if (!STATE.omrData || !Array.isArray(STATE.omrData.selectedNoteIndices) || STATE.omrData.selectedNoteIndices.length < 2) {
+        showToast('请先在五线谱上拖拽框选至少两个音符', 'info');
+        return;
+      }
+      const indices = [...new Set(STATE.omrData.selectedNoteIndices)]
+        .filter(i => Number.isInteger(i) && i >= 0 && i < STATE.omrData.notes.length)
+        .sort((a, b) => b - a);
+      indices.forEach(i => STATE.omrData.notes.splice(i, 1));
+      STATE.omrData.selectedNoteIndices = [];
+      STATE.omrData.selectedNoteIndex = STATE.omrData.notes.length ? Math.min(indices[indices.length - 1] || 0, STATE.omrData.notes.length - 1) : null;
+      STATE.notes = STATE.omrData.notes.map(n => ({ midi: n.midi, duration: n.duration, isRest: false }));
+      updateOmrToolbarBadge();
+      renderOmrCanvas();
+      renderJianpuScore();
+      syncRawTextFromNotes();
+      showToast(`已批量删除 ${indices.length} 个音符`, 'success');
     }
 
     // 加载内置测试五线谱图片
@@ -3488,7 +3903,7 @@
       reader.readAsText(file);
     }
 
-    function parseMusicXmlString(xmlText, fallbackTitle = 'MusicXML 乐谱') {
+    function parseMusicXmlStringLegacy(xmlText, fallbackTitle = 'MusicXML 乐谱') {
       try {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
@@ -3591,6 +4006,84 @@
         syncRawTextFromNotes();
         showToast(`MusicXML 导入成功！已 100% 无损转换为 ${STATE.notes.length} 个简谱音符`, 'success');
 
+      } catch (err) {
+        console.error('MusicXML 解析失败:', err);
+        showToast('MusicXML 导入解析失败，请检查文件格式', 'error');
+      }
+    }
+
+    // 时间轴版 MusicXML 解析：保留 chord、backup、forward、voice 和多小节位置。
+    function parseMusicXmlString(xmlText, fallbackTitle = 'MusicXML 乐谱') {
+      try {
+        const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+        if (doc.querySelector('parsererror')) return showToast('MusicXML 文件格式有误，无法解析', 'error');
+        const title = doc.querySelector('work-title') || doc.querySelector('movement-title');
+        document.getElementById('scoreTitleInput').value = title?.textContent.trim() || fallbackTitle;
+        const part = doc.querySelector('part');
+        if (!part) return showToast('MusicXML 中未找到可解析的 part', 'warning');
+        const semi = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+        const keyMap = { '-7': 'Cb', '-6': 'Gb', '-5': 'Db', '-4': 'Ab', '-3': 'Eb', '-2': 'Bb', '-1': 'F', '0': 'C', '1': 'G', '2': 'D', '3': 'A', '4': 'E', '5': 'B', '6': 'F#', '7': 'C#' };
+        let divisions = 1, partTime = 0, firstKey = false, firstTime = false, firstTempo = false;
+        const notes = [];
+        for (const measure of Array.from(part.children).filter(n => n.localName === 'measure')) {
+          let cursor = 0, maxTime = 0;
+          const lastStart = new Map();
+          for (const node of Array.from(measure.children)) {
+            if (node.localName === 'attributes') {
+              const d = Array.from(node.children).find(n => n.localName === 'divisions');
+              if (d) divisions = Math.max(1, parseFloat(d.textContent) || divisions);
+              const key = Array.from(node.children).find(n => n.localName === 'key');
+              const fifths = key && Array.from(key.children).find(n => n.localName === 'fifths');
+              if (!firstKey && fifths) {
+                const k = keyMap[String(parseInt(fifths.textContent, 10))] || 'C';
+                STATE.key = k;
+                const select = document.getElementById('selectKey');
+                if (select && Array.from(select.options).some(o => o.value === k)) select.value = k;
+                firstKey = true;
+              }
+              const time = Array.from(node.children).find(n => n.localName === 'time');
+              const beats = time && Array.from(time.children).find(n => n.localName === 'beats');
+              const beatType = time && Array.from(time.children).find(n => n.localName === 'beat-type');
+              if (!firstTime && beats && beatType) {
+                const sig = `${beats.textContent.trim()}/${beatType.textContent.trim()}`;
+                const select = document.getElementById('selectTimeSig');
+                if (select && Array.from(select.options).some(o => o.value === sig)) { select.value = sig; STATE.timeSig = sig; }
+                firstTime = true;
+              }
+            } else if (node.localName === 'direction') {
+              const sound = node.querySelector('sound[tempo]');
+              const tempo = sound ? parseInt(sound.getAttribute('tempo'), 10) : NaN;
+              if (!firstTempo && tempo >= 40 && tempo <= 240) { STATE.bpm = tempo; onBpmInput(tempo); firstTempo = true; }
+            } else if (node.localName === 'backup' || node.localName === 'forward') {
+              const amount = Math.max(0, parseFloat(node.querySelector('duration')?.textContent || '0'));
+              cursor = node.localName === 'backup' ? Math.max(0, cursor - amount) : cursor + amount;
+              maxTime = Math.max(maxTime, cursor);
+            } else if (node.localName === 'note' && !node.querySelector('grace')) {
+              const voice = node.querySelector('voice')?.textContent.trim() || '1';
+              const raw = Math.max(0, parseFloat(node.querySelector('duration')?.textContent || String(divisions)));
+              const duration = Math.max(0.25, raw / divisions);
+              const chord = !!node.querySelector('chord');
+              const start = chord && lastStart.has(voice) ? lastStart.get(voice) : cursor;
+              const rest = !!node.querySelector('rest');
+              const pitch = node.querySelector('pitch');
+              const step = pitch?.querySelector('step')?.textContent.trim().toUpperCase() || 'C';
+              const octave = parseInt(pitch?.querySelector('octave')?.textContent || '4', 10);
+              const alter = parseInt(pitch?.querySelector('alter')?.textContent || '0', 10);
+              notes.push({ midi: rest ? 0 : (octave + 1) * 12 + (semi[step] || 0) + alter, duration, isRest: rest, startTick: partTime + start, voice, isChord: chord, dots: node.querySelectorAll('dot').length, tieStart: !!node.querySelector('tie[type="start"], tied[type="start"]'), tieStop: !!node.querySelector('tie[type="stop"], tied[type="stop"]') });
+              lastStart.set(voice, start);
+              if (!chord) cursor = start + raw;
+              maxTime = Math.max(maxTime, start + raw);
+            }
+          }
+          partTime += maxTime;
+        }
+        notes.sort((a, b) => (a.startTick - b.startTick) || String(a.voice).localeCompare(String(b.voice)));
+        if (!notes.length) return showToast('未能提取出有效音符', 'warning');
+        STATE.notes = notes;
+        updateHeaderLabels();
+        renderJianpuScore();
+        syncRawTextFromNotes();
+        showToast(`MusicXML 导入成功！解析 ${notes.length} 个音符`, 'success');
       } catch (err) {
         console.error('MusicXML 解析失败:', err);
         showToast('MusicXML 导入解析失败，请检查文件格式', 'error');
